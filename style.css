@@ -1,40 +1,45 @@
 :root {
     --color-primary: #5E4B8B;
-    --color-background: #ffffff;
+    --color-background: #d8d8d8;
     --color-text: #1c1c1c;
     --color-accent: #f5c518;
-    --color-muted: #e0e0e0;
+    --color-muted: #a0a0a0; /* darker muted gray for lines */
 }
 
 body {
     font-family: sans-serif;
-    background-color: var(--color-muted);
+    background-color: var(--color-background);
     color: var(--color-text);
     margin: 0;
     padding: 2rem;
-}
-
-.container {
-    max-width: 700px;
-    margin: 0 auto;
     line-height: 1.6;
-    background-color: var(--color-background); /* white box */
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.05); /* soft shadow */
 }
 
+main {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
 
 h1 {
     font-size: 1.75rem;
     color: var(--color-primary);
     margin-bottom: 1rem;
+    font-weight: bold;
 }
 
 h2 {
     font-size: 1.25rem;
     color: var(--color-primary);
-    margin-top: 2rem;
+    margin-top: 2.5rem;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid var(--color-muted);
+    margin: 2rem 0;
 }
 
 ul {
@@ -52,4 +57,3 @@ a:hover {
     text-decoration: underline;
     color: var(--color-accent);
 }
-
