@@ -1,55 +1,262 @@
+/* Catppuccin Frappé (Dark Mode - Default) */
 :root {
-    --color-primary: #5E4B8B;
-    --color-background: #ffffff;
-    --color-text: #1c1c1c;
-    --color-accent: #f5c518;
-    --color-muted: #dddddd;
+    --base: #303446;
+    --mantle: #292c3c;
+    --crust: #232634;
+    --text: #c6d0f5;
+    --subtext1: #b5bfe2;
+    --subtext0: #a5adce;
+    --overlay2: #949cbb;
+    --overlay1: #838ba7;
+    --surface2: #626880;
+    --surface1: #51576d;
+    --surface0: #414559;
+    
+    /* Accent colors */
+    --mauve: #ca9ee6;
+    --lavender: #babbf1;
+    --blue: #8caaee;
+    --sapphire: #85c1dc;
+    --sky: #99d1db;
+    --teal: #81c8be;
+    --green: #a6d189;
+    --yellow: #e5c890;
+    --peach: #ef9f76;
+    --rosewater: #f2d5cf;
 }
 
 body {
     font-family: 'Inter', Roboto, Arial, sans-serif;
-    background-color: var(--color-background);
-    color: var(--color-text);
+    background-color: var(--base);
+    color: var(--text);
     margin: 0;
     padding: 2rem;
     line-height: 1.6;
     font-size: 1.33rem;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    transition: background-color 0.5s, color 0.5s;
 }
 
+/* Catppuccin Latte (Light Mode) */
+body:not(.dark-mode) {
+    --base: #eff1f5;
+    --mantle: #e6e9ef;
+    --crust: #dce0e8;
+    --text: #4c4f69;
+    --subtext1: #5c5f77;
+    --subtext0: #6c6f85;
+    --overlay2: #7c7f93;
+    --overlay1: #8c8fa1;
+    --surface2: #acb0be;
+    --surface1: #bcc0cc;
+    --surface0: #ccd0da;
+    
+    /* Accent colors for light mode */
+    --mauve: #8839ef;
+    --lavender: #7287fd;
+    --blue: #1e66f5;
+    --sapphire: #209fb5;
+    --sky: #04a5e5;
+    --teal: #179299;
+    --green: #40a02b;
+    --yellow: #df8e1d;
+    --peach: #fe640b;
+    --rosewater: #dc8a78;
+}
+
+/* Dark mode class for checkbox-based toggle */
+body.dark-mode {
+    --base: #303446;
+    --mantle: #292c3c;
+    --crust: #232634;
+    --text: #c6d0f5;
+    --subtext1: #b5bfe2;
+    --subtext0: #a5adce;
+    --overlay2: #949cbb;
+    --overlay1: #838ba7;
+    --surface2: #626880;
+    --surface1: #51576d;
+    --surface0: #414559;
+    
+    --mauve: #ca9ee6;
+    --lavender: #babbf1;
+    --blue: #8caaee;
+    --sapphire: #85c1dc;
+    --sky: #99d1db;
+    --teal: #81c8be;
+    --green: #a6d189;
+    --yellow: #e5c890;
+    --peach: #ef9f76;
+    --rosewater: #f2d5cf;
+}
+
+/* Hide the checkbox */
+#toggle {
+    display: none;
+}
+
+/* Toggle button container */
+.display {
+    width: auto;
+    height: auto;
+    display: inline-block;
+    background: transparent;
+}
+
+label {
+    width: 80px;
+    height: 40px;
+    border-radius: 999px;
+    background: var(--surface0);
+    box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    position: relative;
+    display: block;
+    transition: background 0.5s;
+}
+
+.circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--text);
+    box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.3);
+    position: absolute;
+    top: 50%;
+    left: 4px;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition: all 0.5s;
+}
+
+svg {
+    width: 16px;
+    height: 16px;
+    position: absolute;
+    transition: all 0.5s;
+}
+
+.sun {
+    color: var(--yellow);
+    margin-top: 0%;
+    opacity: 1;
+}
+
+.moon {
+    margin-top: -150%;
+    color: var(--lavender);
+    opacity: 0;
+}
+
+/* Checked state (dark mode ON) */
+input[type=checkbox]:checked + .display label {
+    background: var(--surface0);
+}
+
+input[type=checkbox]:checked + .display label .circle {
+    left: calc(100% - 36px);
+    background: var(--text);
+}
+
+input[type=checkbox]:checked + .display label .circle .sun {
+    margin-top: 150%;
+    opacity: 0;
+}
+
+input[type=checkbox]:checked + .display label .circle .moon {
+    margin-top: 0%;
+    opacity: 1;
+}
+
+/* Navbar */
+.navbar {
+    position: sticky;
+    top: 0;
+    background: var(--surface0);
+    padding: 1rem 2rem;
+    z-index: 1000;
+    margin: -2rem -2rem 2rem -2rem;
+    transition: background 0.5s;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.nav-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.nav-container a {
+    color: var(--text);
+    text-decoration: none;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: color 0.3s;
+}
+
+.nav-container a:hover {
+    color: var(--mauve);
+}
+
+/* Main content */
 main {
-    background: var(--color-background);
+    background: transparent;
     max-width: 800px;
     margin: 0 auto;
     padding: 2rem 1rem;
 }
 
+/* Headers with accent colors */
 h1 {
-    font-size: 1.75rem;
-    color: var(--color-primary);
+    font-size: 2rem;
+    color: var(--mauve);
     margin-bottom: 1rem;
     font-weight: bold;
-    font-size: 2rem;
-}
-
-h2 {
-    font-size: 1.25rem;
-    color: var(--color-primary);
-    margin-top: 2.5rem;
-    margin-bottom: 0.5rem;
-    font-weight: bold;
-    font-size: 1.5rem;
-}
-
-h1, h2 {
     line-height: 1.2;
 }
 
+h2 {
+    font-size: 1.5rem;
+    margin-top: 2.5rem;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+    line-height: 1.2;
+}
+
+/* Different accent colors for each section */
+#contact h2 {
+    color: var(--lavender);
+}
+
+#overview h2 {
+    color: var(--blue);
+}
+
+#projects h2 {
+    color: var(--teal);
+}
+
+#skills h2 {
+    color: var(--green);
+}
+
+#hobbies h2 {
+    color: var(--peach);
+}
+
+/* Horizontal rules */
 hr {
     border: none;
-    border-top: 1px solid var(--color-muted);
+    border-top: 1px solid var(--surface1);
     margin: 2rem 0;
 }
 
+/* Lists */
 ul {
     list-style-type: disc;
     padding-left: 1.5rem;
@@ -59,10 +266,66 @@ ul li {
     margin-bottom: 0.5rem;
 }
 
+/* Links */
+a {
+    color: var(--mauve);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+a:hover {
+    text-decoration: underline;
+    color: var(--lavender);
+}
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+section {
+    scroll-margin-top: 80px;
+}
+
+/* Mobile responsive */
 @media (max-width: 600px) {
     body {
         padding: 1rem;
         font-size: 1.2rem;
+    }
+
+    .navbar {
+        margin: -1rem -1rem 1rem -1rem;
+        padding: 1rem;
+    }
+
+    .nav-container {
+        flex-wrap: wrap;
+        gap: 0.8rem;
+        justify-content: center;
+    }
+
+    .nav-container a {
+        font-size: 0.9rem;
+    }
+
+    label {
+        width: 60px;
+        height: 30px;
+    }
+
+    .circle {
+        width: 24px;
+        height: 24px;
+    }
+
+    svg {
+        width: 12px;
+        height: 12px;
+    }
+
+    input[type=checkbox]:checked + .display label .circle {
+        left: calc(100% - 28px);
     }
 
     main {
@@ -76,15 +339,4 @@ ul li {
     h2 {
         font-size: 1.4rem;
     }
-}
-
-a {
-    color: var(--color-primary);
-    text-decoration: none;
-    transition: color 0.3s ease;
-}
-
-a:hover {
-    text-decoration: underline;
-    color: var(--color-accent);
 }
