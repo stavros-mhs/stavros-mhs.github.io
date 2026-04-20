@@ -1,0 +1,346 @@
+/* Catppuccin Frappé (Dark Mode - Default) */
+:root {
+    --base: #2e2e2e;;
+    --text: #e0ddd8;
+    --surface1: #3a3a3a;
+    --surface0: #4a4a4a;
+    
+    /* Accent colors */
+    --orange: #c87941;
+    --orange-accent: #e8954d;
+
+    --link:         #c9a87c;
+    --link-hover:   #e8954d;
+    --link-active:  #f0a862;
+    --link-visited: #a88860;
+}
+
+body {
+    font-family: 'Inter', Roboto, Arial, sans-serif;
+    background-color: var(--base);
+    color: var(--text);
+    margin: 0;
+    padding: 2rem;
+    line-height: 1.6;
+    font-size: 1.33rem;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    transition: background-color 0.5s, color 0.5s;
+}
+
+body:not(.dark-mode) {
+    --base: #f0f0f0;
+    --text: #4c4f69;
+    --surface1: #bcc0cc;
+    --surface0: #ccd0da;
+    
+    --link: #b8874a;
+    --link-visited: #8f6535;
+    --link-hover:   #d4700f;
+    --link-active:  #e8894d;
+
+    --orange: #c47030;
+    --orange-accent: #c47030;
+}
+
+/* Dark mode class for checkbox-based toggle */
+body.dark-mode {
+    --base: #2e2e2e;;
+    --text: #e0ddd8;
+    --surface1: #3a3a3a;
+    --surface0: #4a4a4a;
+    
+    --link:         #c9a87c;
+    --link-hover:   #e8954d;
+    --link-active:  #f0a862;
+    --link-visited: #a88860;
+
+    --orange: #c87941;
+    --orange-accent: #e8954d;
+}
+
+/* Hide the checkbox */
+#toggle {
+    display: none;
+}
+
+/* Toggle button container */
+.display {
+    width: auto;
+    height: auto;
+    display: inline-block;
+    background: transparent;
+}
+
+label {
+    width: 80px;
+    height: 40px;
+    border-radius: 999px;
+    background: var(--surface0);
+    box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    position: relative;
+    display: block;
+    transition: background 0.5s;
+}
+
+.circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--text);
+    box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.3);
+    position: absolute;
+    top: 50%;
+    left: 4px;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition: all 0.5s;
+}
+
+svg {
+    width: 16px;
+    height: 16px;
+    position: absolute;
+    transition: all 0.5s;
+}
+
+.sun {
+    color: var(--orange);
+    margin-top: 0%;
+    opacity: 1;
+}
+
+.moon {
+    margin-top: -150%;
+    color: var(--orange);
+    opacity: 0;
+}
+
+/* Checked state (dark mode ON) */
+input[type=checkbox]:checked + .display label {
+    background: var(--surface0);
+}
+
+input[type=checkbox]:checked + .display label .circle {
+    left: calc(100% - 36px);
+    background: var(--text);
+}
+
+input[type=checkbox]:checked + .display label .circle .sun {
+    margin-top: 150%;
+    opacity: 0;
+}
+
+input[type=checkbox]:checked + .display label .circle .moon {
+    margin-top: 0%;
+    opacity: 1;
+}
+
+/* Navbar */
+.navbar {
+    position: sticky;
+    top: 0;
+    background: var(--surface0);
+    padding: 1rem 2rem;
+    z-index: 1000;
+    margin: -2rem -2rem 2rem -2rem;
+    transition: background 0.5s;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.nav-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.nav-container a {
+    color: var(--link);
+    text-decoration: none;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: color 0.3s;
+}
+
+.nav-container a:visited {
+    color: var(--link);
+}
+
+.nav-container a:hover {
+    color: var(--link-hover);
+}
+
+/* Main content */
+main {
+    background: transparent;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+/* Headers with accent colors */
+h1 {
+    font-size: 2rem;
+    color: var(--orange-accent);
+    margin-bottom: 1rem;
+    font-weight: bold;
+    line-height: 1.2;
+}
+
+h2 {
+    font-size: 1.5rem;
+    margin-top: 2.5rem;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+    line-height: 1.2;
+}
+
+/* Different accent colors for each section */
+#contact h2 {
+    color: var(--orange-accent);
+}
+
+#overview h2 {
+    color: var(--orange-accent);
+}
+
+#projects h2 {
+    color: var(--orange-accent);
+}
+
+#skills h2 {
+    color: var(--orange-accent);
+}
+
+#hobbies h2 {
+    color: var(--orange-accent);
+}
+
+/* Horizontal rules */
+hr {
+    border: none;
+    border-top: 1px solid var(--surface1);
+    margin: 2rem 0;
+}
+
+/* Lists */
+ul {
+    list-style-type: disc;
+    padding-left: 1.5rem;
+}
+
+ul li {
+    margin-bottom: 0.5rem;
+}
+
+.skills-list {
+    list-style: none;
+    padding-left: 0;
+}
+
+.contact-list {
+    list-style: none;
+    padding-left: 0;
+}
+
+.contact-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+}
+
+.contact-list svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    color: var(--orange-accent);
+    position: static;
+    transition: none;
+}
+
+/* Links */
+a {
+    color: var(--link);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+a:hover {
+    color: var(--link-hover);
+    text-decoration: underline;
+}
+a:active {
+    color: var(--link-active);
+    text-decoration: underline;
+}
+a:visited {
+    color: var(--link-visited);
+}
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+section {
+    scroll-margin-top: 80px;
+}
+
+/* Mobile responsive */
+@media (max-width: 600px) {
+    body {
+        padding: 1rem;
+        font-size: 1.2rem;
+    }
+
+    .navbar {
+        margin: -1rem -1rem 1rem -1rem;
+        padding: 1rem;
+    }
+
+    .nav-container {
+        flex-wrap: wrap;
+        gap: 0.8rem;
+        justify-content: center;
+    }
+
+    .nav-container a {
+        font-size: 0.9rem;
+    }
+
+    label {
+        width: 60px;
+        height: 30px;
+    }
+
+    .circle {
+        width: 24px;
+        height: 24px;
+    }
+
+    svg {
+        width: 12px;
+        height: 12px;
+    }
+
+    input[type=checkbox]:checked + .display label .circle {
+        left: calc(100% - 28px);
+    }
+
+    main {
+        padding: 1rem 0.5rem;
+    }
+
+    h1 {
+        font-size: 1.75rem;
+    }
+
+    h2 {
+        font-size: 1.4rem;
+    }
+}
