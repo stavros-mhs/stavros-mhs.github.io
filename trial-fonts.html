@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Font trials</title>
+    <script>
+        (function () {
+            var saved = null;
+            try { saved = localStorage.getItem('theme'); } catch (e) {}
+            var theme = (saved === 'dark' || saved === 'light')
+                ? saved
+                : (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans&family=Inter&family=Source+Sans+3&family=Newsreader&family=JetBrains+Mono&display=swap">
+    <style>
+        /* Trial page only: removed in Task 2.3 */
+        .label {
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin: 0 0 0.5rem 0;
+        }
+        .trial {
+            margin: 2rem 0;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <p>Font trials. Use the toggle on the main page to switch theme, then reload this page.</p>
+
+        <section class="trial" style="font-family: 'IBM Plex Sans', sans-serif;">
+            <p class="label">IBM Plex Sans</p>
+            <h1>Stavros Michailidis — Undergraduate Student at NKUA</h1>
+            <p>I'm a Computer Science undergraduate at the National and Kapodistrian University of Athens (NKUA).</p>
+            <a href="https://github.com/stavros-mhs/Ginny">Ginny</a>
+        </section>
+
+        <section class="trial" style="font-family: 'Inter', sans-serif;">
+            <p class="label">Inter</p>
+            <h1>Stavros Michailidis — Undergraduate Student at NKUA</h1>
+            <p>I'm a Computer Science undergraduate at the National and Kapodistrian University of Athens (NKUA).</p>
+            <a href="https://github.com/stavros-mhs/Ginny">Ginny</a>
+        </section>
+
+        <section class="trial" style="font-family: 'Source Sans 3', sans-serif;">
+            <p class="label">Source Sans 3</p>
+            <h1>Stavros Michailidis — Undergraduate Student at NKUA</h1>
+            <p>I'm a Computer Science undergraduate at the National and Kapodistrian University of Athens (NKUA).</p>
+            <a href="https://github.com/stavros-mhs/Ginny">Ginny</a>
+        </section>
+
+        <section class="trial" style="font-family: 'Newsreader', serif;">
+            <p class="label">Newsreader</p>
+            <h1>Stavros Michailidis — Undergraduate Student at NKUA</h1>
+            <p>I'm a Computer Science undergraduate at the National and Kapodistrian University of Athens (NKUA).</p>
+            <a href="https://github.com/stavros-mhs/Ginny">Ginny</a>
+        </section>
+
+        <section class="trial" style="font-family: 'JetBrains Mono', monospace;">
+            <p class="label">JetBrains Mono</p>
+            <h1>Stavros Michailidis — Undergraduate Student at NKUA</h1>
+            <p>I'm a Computer Science undergraduate at the National and Kapodistrian University of Athens (NKUA).</p>
+            <a href="https://github.com/stavros-mhs/Ginny">Ginny</a>
+        </section>
+    </main>
+</body>
+</html>
