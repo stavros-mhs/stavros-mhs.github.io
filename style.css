@@ -28,15 +28,15 @@ body {
 
 /* Light theme: set on <html> by the head script */
 :root[data-theme="light"] {
-    --bg: #f0f0f0;
-    --surface: #ccd0da;
-    --text: #4c4f69;
-    --text-muted: #5c5f77;
-    --accent: #c47030;
-    --link: #7a4c1a;
-    --link-hover: #8f3d0a;
-    --rule: #bcc0cc;
-    --focus: #8f3d0a;
+    --bg: #e0ddd6;
+    --surface: #cdcac2;
+    --text: #55524b;
+    --text-muted: #5a5650;
+    --accent: #b0622a;
+    --link: #6e4416;
+    --link-hover: #84370a;
+    --rule: #b9b5ac;
+    --focus: #84370a;
 }
 
 /* Visually hidden checkbox: it stays in the tab order, so keyboard users can reach the toggle */
