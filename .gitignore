@@ -1,0 +1,4 @@
+# Local-only: APM planning files, assistant config and Worker rules are never committed or pushed
+.apm/
+.claude/
+AGENTS.md
