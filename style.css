@@ -1,7 +1,7 @@
 /* Site styles. */
 
-/* Dark theme: the default, used when body does not have the light theme class */
-:root {
+/* Dark theme: the default, used when no theme attribute is set */
+:root, :root[data-theme="dark"] {
     --bg: #2e2e2e;
     --surface: #4a4a4a;
     --text: #e0ddd8;
@@ -25,8 +25,8 @@ body {
     transition: background-color 0.5s, color 0.5s;
 }
 
-/* Light theme: set when body does not have the dark-mode class */
-body:not(.dark-mode) {
+/* Light theme: set on <html> by the head script */
+:root[data-theme="light"] {
     --bg: #f0f0f0;
     --surface: #ccd0da;
     --text: #4c4f69;

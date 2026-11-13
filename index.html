@@ -4,10 +4,20 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Stavros Michailidis — Undergraduate Student at NKUA</title>
+        <script>
+            (function () {
+                var saved = null;
+                try { saved = localStorage.getItem('theme'); } catch (e) {}
+                var theme = (saved === 'dark' || saved === 'light')
+                    ? saved
+                    : (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+                document.documentElement.setAttribute('data-theme', theme);
+            })();
+        </script>
         <link rel="stylesheet" href="style.css">
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans&display=swap">
     </head>
-    <body class="dark-mode">
+    <body>
         <nav class="navbar">
             <div class="nav-container">
                 <a href="#projects">Projects</a>
@@ -110,30 +120,16 @@
         </main>
 
         <script>
-            // Dark mode toggle functionality
+            // Sync the toggle with the theme the head script already set, then save changes
             const toggle = document.getElementById('toggle');
-            const body = document.body;
+            const root = document.documentElement;
 
-            // Load saved preference or default to dark mode
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme === 'light') {
-                body.classList.remove('dark-mode');
-                toggle.checked = false;
-            } else {
-                // Default to dark mode
-                body.classList.add('dark-mode');
-                toggle.checked = true;
-            }
+            toggle.checked = root.getAttribute('data-theme') === 'dark';
 
-            // Toggle theme on checkbox change
-            toggle.addEventListener('change', function() {
-                if (this.checked) {
-                    body.classList.add('dark-mode');
-                    localStorage.setItem('theme', 'dark');
-                } else {
-                    body.classList.remove('dark-mode');
-                    localStorage.setItem('theme', 'light');
-                }
+            toggle.addEventListener('change', function () {
+                const theme = this.checked ? 'dark' : 'light';
+                root.setAttribute('data-theme', theme);
+                try { localStorage.setItem('theme', theme); } catch (e) {}
             });
         </script>
     </body>
