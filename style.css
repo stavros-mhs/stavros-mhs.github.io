@@ -30,13 +30,13 @@ body {
 :root[data-theme="light"] {
     --bg: #e0ddd6;
     --surface: #cdcac2;
-    --text: #55524b;
-    --text-muted: #5a5650;
-    --accent: #b0622a;
-    --link: #6e4416;
-    --link-hover: #84370a;
+    --text: #5c5951;
+    --text-muted: #5f5c54;
+    --accent: #b5693a;
+    --link: #4d5266;
+    --link-hover: #2f3347;
     --rule: #b9b5ac;
-    --focus: #84370a;
+    --focus: #4d5266;
 }
 
 /* Visually hidden checkbox: it stays in the tab order, so keyboard users can reach the toggle */
@@ -178,7 +178,7 @@ h1 {
     font-size: 2rem;
     color: var(--accent);
     margin-bottom: 1rem;
-    font-weight: bold;
+    font-weight: 500;
     line-height: 1.2;
 }
 
@@ -187,8 +187,13 @@ h2 {
     font-size: 1.5rem;
     margin-top: 2.5rem;
     margin-bottom: 0.5rem;
-    font-weight: bold;
+    font-weight: 500;
     line-height: 1.2;
+}
+
+/* Bold text: lighter than the browser's default bold, to match the headings */
+strong {
+    font-weight: 500;
 }
 
 /* Horizontal rules */
