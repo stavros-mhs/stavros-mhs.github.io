@@ -1,23 +1,20 @@
 /* Site styles. */
-:root {
-    --base: #2e2e2e;;
-    --text: #e0ddd8;
-    --surface1: #3a3a3a;
-    --surface0: #4a4a4a;
-    
-    /* Accent colors */
-    --orange: #c87941;
-    --orange-accent: #e8954d;
 
-    --link:         #c9a87c;
-    --link-hover:   #e8954d;
-    --link-active:  #f0a862;
-    --link-visited: #a88860;
+/* Dark theme: the default, used when body does not have the light theme class */
+:root {
+    --bg: #2e2e2e;
+    --surface: #4a4a4a;
+    --text: #e0ddd8;
+    --text-muted: #a8a49e;
+    --accent: #e8954d;
+    --link: #d8b78e;
+    --link-hover: #f5b06e;
+    --rule: #3a3a3a;
 }
 
 body {
     font-family: 'IBM Plex Sans', Roboto, Arial, sans-serif;
-    background-color: var(--base);
+    background-color: var(--bg);
     color: var(--text);
     margin: 0;
     padding: 2rem;
@@ -28,35 +25,16 @@ body {
     transition: background-color 0.5s, color 0.5s;
 }
 
+/* Light theme: set when body does not have the dark-mode class */
 body:not(.dark-mode) {
-    --base: #f0f0f0;
+    --bg: #f0f0f0;
+    --surface: #ccd0da;
     --text: #4c4f69;
-    --surface1: #bcc0cc;
-    --surface0: #ccd0da;
-    
-    --link: #b8874a;
-    --link-visited: #8f6535;
-    --link-hover:   #d4700f;
-    --link-active:  #e8894d;
-
-    --orange: #c47030;
-    --orange-accent: #c47030;
-}
-
-/* Dark mode class for checkbox-based toggle */
-body.dark-mode {
-    --base: #2e2e2e;;
-    --text: #e0ddd8;
-    --surface1: #3a3a3a;
-    --surface0: #4a4a4a;
-    
-    --link:         #c9a87c;
-    --link-hover:   #e8954d;
-    --link-active:  #f0a862;
-    --link-visited: #a88860;
-
-    --orange: #c87941;
-    --orange-accent: #e8954d;
+    --text-muted: #5c5f77;
+    --accent: #c47030;
+    --link: #7a4c1a;
+    --link-hover: #8f3d0a;
+    --rule: #bcc0cc;
 }
 
 /* Hide the checkbox */
@@ -76,7 +54,7 @@ label {
     width: 80px;
     height: 40px;
     border-radius: 999px;
-    background: var(--surface0);
+    background: var(--surface);
     box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.2);
     cursor: pointer;
     position: relative;
@@ -109,20 +87,20 @@ svg {
 }
 
 .sun {
-    color: var(--orange);
+    color: var(--accent);
     margin-top: 0%;
     opacity: 1;
 }
 
 .moon {
     margin-top: -150%;
-    color: var(--orange);
+    color: var(--accent);
     opacity: 0;
 }
 
 /* Checked state (dark mode ON) */
 input[type=checkbox]:checked + .display label {
-    background: var(--surface0);
+    background: var(--surface);
 }
 
 input[type=checkbox]:checked + .display label .circle {
@@ -144,7 +122,7 @@ input[type=checkbox]:checked + .display label .circle .moon {
 .navbar {
     position: sticky;
     top: 0;
-    background: var(--surface0);
+    background: var(--surface);
     padding: 1rem 2rem;
     z-index: 1000;
     margin: -2rem -2rem 2rem -2rem;
@@ -186,7 +164,7 @@ main {
 /* Headers with accent colors */
 h1 {
     font-size: 2rem;
-    color: var(--orange-accent);
+    color: var(--accent);
     margin-bottom: 1rem;
     font-weight: bold;
     line-height: 1.2;
@@ -202,29 +180,29 @@ h2 {
 
 /* Different accent colors for each section */
 #contact h2 {
-    color: var(--orange-accent);
+    color: var(--accent);
 }
 
 #overview h2 {
-    color: var(--orange-accent);
+    color: var(--accent);
 }
 
 #projects h2 {
-    color: var(--orange-accent);
+    color: var(--accent);
 }
 
 #skills h2 {
-    color: var(--orange-accent);
+    color: var(--accent);
 }
 
 #hobbies h2 {
-    color: var(--orange-accent);
+    color: var(--accent);
 }
 
 /* Horizontal rules */
 hr {
     border: none;
-    border-top: 1px solid var(--surface1);
+    border-top: 1px solid var(--rule);
     margin: 2rem 0;
 }
 
@@ -259,7 +237,7 @@ ul li {
     width: 18px;
     height: 18px;
     flex-shrink: 0;
-    color: var(--orange-accent);
+    color: var(--accent);
     position: static;
     transition: none;
 }
@@ -275,11 +253,11 @@ a:hover {
     text-decoration: underline;
 }
 a:active {
-    color: var(--link-active);
+    color: var(--link-hover);
     text-decoration: underline;
 }
 a:visited {
-    color: var(--link-visited);
+    color: var(--link);
 }
 
 /* Smooth scrolling */
