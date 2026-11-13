@@ -1,4 +1,4 @@
-/* Catppuccin Frappé (Dark Mode - Default) */
+/* Site styles. */
 :root {
     --base: #2e2e2e;;
     --text: #e0ddd8;
@@ -16,7 +16,7 @@
 }
 
 body {
-    font-family: 'Inter', Roboto, Arial, sans-serif;
+    font-family: 'IBM Plex Sans', Roboto, Arial, sans-serif;
     background-color: var(--base);
     color: var(--text);
     margin: 0;
