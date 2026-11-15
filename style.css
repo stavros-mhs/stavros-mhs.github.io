@@ -158,6 +158,13 @@ input[type=checkbox]:checked + .display label .circle .moon {
     display: none;
 }
 
+/* The visible state word: a fixed width, so the navbar does not shift between On and Off */
+.motion-state {
+    display: inline-block;
+    min-width: 2.2em;
+    text-align: left;
+}
+
 /* Focus ring, shown for keyboard focus, as on the theme toggle */
 .motion-switch:focus-visible {
     outline: 2px solid var(--focus);

@@ -38,6 +38,7 @@
                 <button type="button" class="motion-switch" id="motion" role="switch" aria-checked="false" hidden>
                     <span class="motion-label">Animations</span>
                     <span class="motion-track" aria-hidden="true"><span class="motion-knob"></span></span>
+                    <span class="motion-state" aria-hidden="true">Off</span>
                 </button>
 
                 <input type="checkbox" id="toggle" checked>
@@ -155,7 +156,9 @@
                 var button = document.getElementById('motion');
 
                 function sync() {
-                    button.setAttribute('aria-checked', root.getAttribute('data-motion') === 'animated' ? 'true' : 'false');
+                    var on = root.getAttribute('data-motion') === 'animated';
+                    button.setAttribute('aria-checked', on ? 'true' : 'false');
+                    button.querySelector('.motion-state').textContent = on ? 'On' : 'Off';
                 }
 
                 button.removeAttribute('hidden');
