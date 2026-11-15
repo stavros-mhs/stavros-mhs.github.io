@@ -1,5 +1,13 @@
 /* Site styles. */
 
+/* Theme toggle: the knob shows the mode you will switch to, with that mode's background */
+:root {
+    --knob-dark: #2e2e2e;
+    --knob-light: #f4ecdc;
+    --moon-icon: #e8954d;
+    --sun-icon: #b5602e;
+}
+
 /* Dark theme: the default, used when no theme attribute is set */
 :root, :root[data-theme="dark"] {
     --bg: #2e2e2e;
@@ -11,7 +19,6 @@
     --link-hover: #f5b06e;
     --rule: #3a3a3a;
     --focus: #e8954d;
-    --knob: #e0ddd8;
 }
 
 body {
@@ -38,7 +45,6 @@ body {
     --link-hover: #8a3c12;
     --rule: #d7c9ad;
     --focus: #805832;
-    --knob: #f4ecdc;
 }
 
 /* Visually hidden checkbox: it stays in the tab order, so keyboard users can reach the toggle */
@@ -80,7 +86,7 @@ label {
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: var(--knob);
+    background: var(--knob-dark);
     box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.3);
     position: absolute;
     top: 50%;
@@ -101,15 +107,15 @@ svg {
 }
 
 .sun {
-    color: var(--accent);
-    margin-top: 0%;
-    opacity: 1;
+    color: var(--sun-icon);
+    margin-top: 150%;
+    opacity: 0;
 }
 
 .moon {
-    margin-top: -150%;
-    color: var(--accent);
-    opacity: 0;
+    margin-top: 0%;
+    color: var(--moon-icon);
+    opacity: 1;
 }
 
 /* Checked state (dark mode ON) */
@@ -119,17 +125,17 @@ input[type=checkbox]:checked + .display label {
 
 input[type=checkbox]:checked + .display label .circle {
     left: calc(100% - 36px);
-    background: var(--knob);
+    background: var(--knob-light);
 }
 
 input[type=checkbox]:checked + .display label .circle .sun {
-    margin-top: 150%;
-    opacity: 0;
+    margin-top: 0%;
+    opacity: 1;
 }
 
 input[type=checkbox]:checked + .display label .circle .moon {
-    margin-top: 0%;
-    opacity: 1;
+    margin-top: -150%;
+    opacity: 0;
 }
 
 /* Navbar */
