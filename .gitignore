@@ -2,3 +2,6 @@
 .apm/
 .claude/
 AGENTS.md
+
+# Local test and QA tools (Playwright and a contrast checker): kept on this machine, never committed or pushed
+tools/
