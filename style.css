@@ -206,7 +206,7 @@ input[type=checkbox]:checked + .display label .circle .moon {
 .navbar {
     position: sticky;
     top: 0;
-    background: var(--surface);
+    background: var(--bg);
     padding: 1rem 2rem;
     z-index: 1000;
     margin: -2rem -2rem 2rem -2rem;
