@@ -211,7 +211,6 @@ input[type=checkbox]:checked + .display label .circle .moon {
     z-index: 1000;
     margin: -2rem -2rem 2rem -2rem;
     transition: background 0.5s;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .nav-container {
