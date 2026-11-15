@@ -14,6 +14,16 @@
                 document.documentElement.setAttribute('data-theme', theme);
             })();
         </script>
+        <script>
+            (function () {
+                var saved = null;
+                try { saved = localStorage.getItem('motion'); } catch (e) {}
+                var mode = (saved === 'animated' || saved === 'minimal')
+                    ? saved
+                    : ((window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ? 'minimal' : 'animated');
+                document.documentElement.setAttribute('data-motion', mode);
+            })();
+        </script>
         <link rel="stylesheet" href="style.css">
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:wght@400;500&display=swap">
     </head>
@@ -24,6 +34,11 @@
                 <a href="#skills">Skills</a>
                 <a href="#hobbies">Hobbies</a>
                 <a href="#contact">Contact</a>
+
+                <button type="button" class="motion-switch" id="motion" role="switch" aria-checked="false" hidden>
+                    <span class="motion-label">Animations</span>
+                    <span class="motion-track" aria-hidden="true"><span class="motion-knob"></span></span>
+                </button>
 
                 <input type="checkbox" id="toggle" checked>
                 <div class="display">
@@ -131,6 +146,28 @@
                 root.setAttribute('data-theme', theme);
                 try { localStorage.setItem('theme', theme); } catch (e) {}
             });
+        </script>
+
+        <script>
+            // Show the Animations switch, which needs JavaScript, and keep it in step with the mode
+            (function () {
+                var root = document.documentElement;
+                var button = document.getElementById('motion');
+
+                function sync() {
+                    button.setAttribute('aria-checked', root.getAttribute('data-motion') === 'animated' ? 'true' : 'false');
+                }
+
+                button.removeAttribute('hidden');
+                sync();
+
+                button.addEventListener('click', function () {
+                    var next = root.getAttribute('data-motion') === 'animated' ? 'minimal' : 'animated';
+                    root.setAttribute('data-motion', next);
+                    sync();
+                    try { localStorage.setItem('motion', next); } catch (e) {}
+                });
+            })();
         </script>
     </body>
     </html>
