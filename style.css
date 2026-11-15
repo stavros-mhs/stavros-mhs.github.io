@@ -144,9 +144,14 @@ input[type=checkbox]:checked + .display label .circle .moon {
     align-items: center;
     gap: 0.6rem;
     margin: 0;
-    padding: 0;
+    padding: 0.4rem 0.6rem;
     border: 0;
-    background: none;
+    border-radius: 999px;
+    background: var(--bg);
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 900;
     color: var(--link);
     font: inherit;
     font-size: 1rem;
@@ -389,6 +394,8 @@ footer {
 
     .motion-switch {
         font-size: 0.9rem;
+        right: 0.5rem;
+        bottom: 0.5rem;
     }
 
     .motion-track {
