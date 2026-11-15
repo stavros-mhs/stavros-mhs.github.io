@@ -11,6 +11,7 @@
     --link-hover: #f5b06e;
     --rule: #3a3a3a;
     --focus: #e8954d;
+    --knob: #e0ddd8;
 }
 
 body {
@@ -37,6 +38,7 @@ body {
     --link-hover: #8a3c12;
     --rule: #d7c9ad;
     --focus: #805832;
+    --knob: #f4ecdc;
 }
 
 /* Visually hidden checkbox: it stays in the tab order, so keyboard users can reach the toggle */
@@ -78,7 +80,7 @@ label {
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: var(--text);
+    background: var(--knob);
     box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.3);
     position: absolute;
     top: 50%;
@@ -117,7 +119,7 @@ input[type=checkbox]:checked + .display label {
 
 input[type=checkbox]:checked + .display label .circle {
     left: calc(100% - 36px);
-    background: var(--text);
+    background: var(--knob);
 }
 
 input[type=checkbox]:checked + .display label .circle .sun {
