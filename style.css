@@ -33,10 +33,10 @@ body {
     --text: #5a4c3c;
     --text-muted: #6a5b49;
     --accent: #b5602e;
-    --link: #7f5430;
+    --link: #805832;
     --link-hover: #8a3c12;
     --rule: #d7c9ad;
-    --focus: #7f5430;
+    --focus: #805832;
 }
 
 /* Visually hidden checkbox: it stays in the tab order, so keyboard users can reach the toggle */
