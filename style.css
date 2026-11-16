@@ -373,12 +373,12 @@ html[data-motion="animated"]:not(.reveal-skipped) h2 {
     display: inline-block;
 }
 
-/* Animated mode: each letter starts faded out and 6px low, then rises into place. Each letter fades for 200 ms;
-   the reveal script spreads the letters' starts so the whole heading takes 400 ms */
+/* Animated mode: each letter starts faded out and 6px low, then rises into place. Each letter fades for 250 ms;
+   the reveal script spreads the letters' starts so the whole heading takes 500 ms */
 html[data-motion="animated"] .letter {
     opacity: 0;
     transform: translateY(6px);
-    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+    transition: opacity 0.25s ease-out, transform 0.25s ease-out;
 }
 
 html[data-motion="animated"] .is-revealed .letter {
@@ -402,13 +402,13 @@ html[data-motion="animated"]:not(.reveal-skipped) .skills-list li {
     opacity: 0;
 }
 
-/* Body items fade for 200 ms, the same as a heading's letters. The reveal script spreads their starts so that
-   each body takes 400 ms, the same as its heading */
+/* Body items fade for 250 ms, the same as a heading's letters. The reveal script spreads their starts so that
+   each body takes 500 ms, the same as its heading */
 html[data-motion="animated"] .reveal-word,
 html[data-motion="animated"] .contact-list li,
 html[data-motion="animated"] #projects li,
 html[data-motion="animated"] .skills-list li {
-    transition: opacity 0.2s ease-out;
+    transition: opacity 0.25s ease-out;
 }
 
 /* Animated mode: each rule waits scaled to 0, then draws from the left to full width, once */
@@ -418,7 +418,7 @@ html[data-motion="animated"]:not(.reveal-skipped) hr {
 }
 
 html[data-motion="animated"] hr {
-    transition: transform 0.4s ease-out;
+    transition: transform 0.5s ease-out;
 }
 
 /* A step that has played shows its item */
