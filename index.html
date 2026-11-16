@@ -176,7 +176,8 @@
             })();
         </script>
         <script>
-            // Reveal queue: the h1, the h2s, the section text, the lists and the rules play one at a time, in page order.
+            // Reveal: the headings play together as soon as the page is ready. Each body of text, list and rule plays when it
+            // scrolls into view. A body takes as long as its heading, so a section has finished by the time the reader reaches it.
             // Animated mode only. The styles are in style.css
             (function () {
                 var root = document.documentElement;
@@ -186,173 +187,37 @@
                     return;
                 }
 
-                // Observer settings in one constant, for the items that start below the first screen
+                // Observer settings in one constant, for the body text, the lists and the rules
                 var REVEAL_OBSERVER_OPTIONS = { threshold: 0.2, rootMargin: '0px 0px -10% 0px' };
 
-                // A heading takes 300 ms in all: each letter fades for LETTER_MS, and the letters' starts are spread over the rest
-                var HEADING_MS = 300;
-                var LETTER_MS = 150;
+                // A heading and a body both take TOTAL_MS. Each item fades for FADE_MS, and the starts of the items in a
+                // group are spread evenly over the rest. The rules' length is set in style.css
+                var TOTAL_MS = 400;
+                var FADE_MS = 200;
 
-                // Body text fades in 100 ms. Each line of text, and each list item, starts ITEM_STAGGER_MS after the line above
-                var BODY_MS = 100;
-                var ITEM_STAGGER_MS = 40;
-
-                // The rules draw in 400 ms. These lengths match the transitions in style.css
-                var RULE_MS = 400;
-
-                // Fallback only: a step that gets no transition end still finishes this long after its longest transition
-                var FALLBACK_MARGIN_MS = 1000;
-
-                // A step plays one item. el is the item and marked gets the class that starts it. The step ends when each
-                // of its targets has finished a transition of prop. span is the length of its longest transition
-                function makeStep(order, el, marked, targets, prop, span) {
-                    return { order: order, el: el, marked: marked, targets: targets, prop: prop, span: span, queued: false };
+                // The delay between the starts of n items, so that the last one ends at TOTAL_MS
+                function spread(n) {
+                    return n > 1 ? (TOTAL_MS - FADE_MS) / (n - 1) : 0;
                 }
 
-                // Starts one step, and calls done when its last transition ends (transitionend). If the mode changes
-                // mid-step, the transition is cancelled instead, which also counts as its end
-                function playStep(step, done) {
-                    var finished = false;
-                    var waiting = step.targets.length;
-                    var timer = null;
+                // Gives each item its start delay from its place in the group
+                function delayItems(items) {
+                    var step = spread(items.length);
+                    items.forEach(function (item, i) { item.style.transitionDelay = (i * step) + 'ms'; });
+                }
 
-                    function finish() {
-                        if (finished) return;
-                        finished = true;
-                        clearTimeout(timer);
-                        done();
-                    }
+                // A step is one thing that reveals. el is the element that is watched, and marked gets the class that starts it
+                function makeStep(order, el, marked) {
+                    return { order: order, el: el, marked: marked, played: false };
+                }
 
-                    function start() {
-                        step.marked.forEach(function (el) { el.classList.add('is-revealed'); });
-                    }
-
-                    // Nothing to wait for, or minimal mode: the item shows at once
-                    if (!waiting || root.getAttribute('data-motion') !== 'animated') {
-                        start();
-                        finish();
-                        return;
-                    }
-
-                    // Read the layout first, so each target's start state is set before its class changes
+                // Starts a step. Steps that start together start in the same frame
+                function play(step) {
+                    if (step.played) return;
+                    step.played = true;
+                    // Read the layout first, so each item's start state is set before its class changes
                     root.getBoundingClientRect();
-
-                    step.targets.forEach(function (target) {
-                        function settle(e) {
-                            // Only this target's own transition counts, not a link's colour change inside it
-                            if (e.target !== target || e.propertyName !== step.prop) return;
-                            target.removeEventListener('transitionend', settle);
-                            target.removeEventListener('transitioncancel', settle);
-                            waiting--;
-                            if (waiting === 0) finish();
-                        }
-                        target.addEventListener('transitionend', settle);
-                        target.addEventListener('transitioncancel', settle);
-                    });
-
-                    timer = setTimeout(finish, step.span + FALLBACK_MARGIN_MS);
-                    start();
-                }
-
-                // The queue: plays the earliest pending step next, one at a time
-                var reveals = {
-                    pending: [],
-                    busy: false,
-                    add: function (step) {
-                        if (step.queued) return; // each item plays once
-                        step.queued = true;
-                        this.pending.push(step);
-                        this.pending.sort(function (a, b) { return a.order - b.order; });
-                        this.next();
-                    },
-                    next: function () {
-                        if (this.busy || !this.pending.length) return;
-                        var queue = this;
-                        this.busy = true;
-                        playStep(this.pending.shift(), function () {
-                            queue.busy = false;
-                            queue.next();
-                        });
-                    }
-                };
-
-                // The delay of the slowest element in a group, from its inline transition-delay
-                function longestDelay(elements) {
-                    return elements.reduce(function (max, el) {
-                        return Math.max(max, parseFloat(el.style.transitionDelay) || 0);
-                    }, 0);
-                }
-
-                // Wraps each word of a body block in its own span. The text and the spaces between words stay as they are.
-                // Returns the spans in page order
-                function splitWords(block) {
-                    var walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
-                    var nodes = [];
-                    while (walker.nextNode()) nodes.push(walker.currentNode);
-
-                    var words = [];
-                    nodes.forEach(function (node) {
-                        var fragment = document.createDocumentFragment();
-                        node.textContent.split(/(\s+)/).forEach(function (part) {
-                            if (part === '') return;
-                            if (/^\s+$/.test(part)) {
-                                fragment.appendChild(document.createTextNode(part));
-                                return;
-                            }
-                            var word = document.createElement('span');
-                            word.className = 'reveal-word';
-                            word.textContent = part;
-                            fragment.appendChild(word);
-                            words.push(word);
-                        });
-                        node.parentNode.replaceChild(fragment, node);
-                    });
-                    return words;
-                }
-
-                // Gives each word the delay of its line. Words on one line start together, and each line starts
-                // ITEM_STAGGER_MS after the line above. Lines are measured at the current width
-                function staggerLines(words) {
-                    var line = -1;
-                    var lastTop = null;
-                    words.forEach(function (word) {
-                        var top = Math.round(word.getBoundingClientRect().top);
-                        if (lastTop === null || Math.abs(top - lastTop) > 2) {
-                            line++;
-                            lastTop = top;
-                        }
-                        word.style.transitionDelay = (line * ITEM_STAGGER_MS) + 'ms';
-                    });
-                }
-
-                // Every item of the queue, in page order: the h1 and h2s, the body text, the lists and the rules
-                function buildSteps() {
-                    var els = document.querySelectorAll('h1, h2, .section-text, .contact-list, #projects ul, .skills-list, hr');
-                    return Array.prototype.map.call(els, function (el, order) {
-                        if (el.tagName === 'H1' || el.tagName === 'H2') {
-                            // Each letter ends with an opacity transition. The heading itself has none
-                            var letters = Array.prototype.slice.call(el.querySelectorAll('.letter'));
-                            return makeStep(order, el, [el], letters, 'opacity', longestDelay(letters) + LETTER_MS);
-                        }
-                        if (el.tagName === 'HR') {
-                            return makeStep(order, el, [el], [el], 'transform', RULE_MS);
-                        }
-                        if (el.classList.contains('section-text')) {
-                            // Body text: its words fade in line by line. The block itself shows at once, and its words wait hidden
-                            var words = splitWords(el);
-                            staggerLines(words);
-                            el.classList.add('is-revealed');
-                            return makeStep(order, el, words, words, 'opacity', longestDelay(words) + BODY_MS);
-                        }
-                        if (el.tagName === 'UL' && !el.classList.contains('contact-list')) {
-                            // A list plays as one step, with its items staggered
-                            var items = Array.prototype.slice.call(el.querySelectorAll('li'));
-                            items.forEach(function (item, i) { item.style.transitionDelay = (i * ITEM_STAGGER_MS) + 'ms'; });
-                            return makeStep(order, el, items, items, 'opacity', longestDelay(items) + BODY_MS);
-                        }
-                        // The Contact list fades as one block
-                        return makeStep(order, el, [el], [el], 'opacity', BODY_MS);
-                    });
+                    step.marked.forEach(function (el) { el.classList.add('is-revealed'); });
                 }
 
                 // Replaces the heading's text with a hidden copy and a letter-by-letter copy.
@@ -384,11 +249,8 @@
                         visible.appendChild(group);
                     });
 
-                    // The heading takes HEADING_MS in all: the last letter starts after the rest of the time its fade needs
-                    var step = letters.length > 1 ? (HEADING_MS - LETTER_MS) / (letters.length - 1) : 0;
-                    letters.forEach(function (letter, i) {
-                        letter.style.transitionDelay = (i * step) + 'ms';
-                    });
+                    // The letters' starts are spread so the whole heading takes TOTAL_MS
+                    delayItems(letters);
 
                     fragment.appendChild(visible);
                     heading.textContent = '';
@@ -406,6 +268,73 @@
                     }
                 }
 
+                // Wraps each word of a body block in its own span. The text and the spaces between words stay as they are.
+                // Returns the spans in page order
+                function splitWords(block) {
+                    var walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+                    var nodes = [];
+                    while (walker.nextNode()) nodes.push(walker.currentNode);
+
+                    var words = [];
+                    nodes.forEach(function (node) {
+                        var fragment = document.createDocumentFragment();
+                        node.textContent.split(/(\s+)/).forEach(function (part) {
+                            if (part === '') return;
+                            if (/^\s+$/.test(part)) {
+                                fragment.appendChild(document.createTextNode(part));
+                                return;
+                            }
+                            var word = document.createElement('span');
+                            word.className = 'reveal-word';
+                            word.textContent = part;
+                            fragment.appendChild(word);
+                            words.push(word);
+                        });
+                        node.parentNode.replaceChild(fragment, node);
+                    });
+                    return words;
+                }
+
+                // Gives each word the delay of its line. Words on one line start together, and the lines are spread
+                // evenly over TOTAL_MS. Lines are measured at the current width
+                function delayLines(words) {
+                    var lines = [];
+                    var lastTop = null;
+                    words.forEach(function (word) {
+                        var top = Math.round(word.getBoundingClientRect().top);
+                        if (lastTop === null || Math.abs(top - lastTop) > 2) {
+                            lines.push([]);
+                            lastTop = top;
+                        }
+                        lines[lines.length - 1].push(word);
+                    });
+                    var step = spread(lines.length);
+                    lines.forEach(function (line, i) {
+                        line.forEach(function (word) { word.style.transitionDelay = (i * step) + 'ms'; });
+                    });
+                }
+
+                // Every step, in page order: the headings, the body text, the lists and the rules
+                function buildSteps() {
+                    var els = document.querySelectorAll('h1, h2, .section-text, #projects ul, .skills-list, .contact-list, hr');
+                    return Array.prototype.map.call(els, function (el, order) {
+                        if (el.tagName === 'H1' || el.tagName === 'H2' || el.tagName === 'HR') {
+                            return makeStep(order, el, [el]);
+                        }
+                        if (el.classList.contains('section-text')) {
+                            // Body text: its words fade in line by line. The block itself shows at once, and its words wait hidden
+                            var words = splitWords(el);
+                            delayLines(words);
+                            el.classList.add('is-revealed');
+                            return makeStep(order, el, words);
+                        }
+                        // A list: its items fade in one after another
+                        var items = Array.prototype.slice.call(el.querySelectorAll('li'));
+                        delayItems(items);
+                        return makeStep(order, el, items);
+                    });
+                }
+
                 // Letter positions are measured in Literata, so the split waits for the font
                 var fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
 
@@ -420,36 +349,35 @@
                         return steps.find(function (step) { return step.el === el; });
                     }
 
-                    // One observer for the items below the first screen. Each one joins the queue once, then is unobserved
+                    // The headings play together, now, whether or not they are on screen
+                    steps.forEach(function (step) {
+                        if (step.el.tagName === 'H1' || step.el.tagName === 'H2') play(step);
+                    });
+
+                    // Body text, lists and rules play when they scroll into view. One observer serves them all, and each plays once
                     var observer = new IntersectionObserver(function (entries) {
                         entries.forEach(function (entry) {
                             if (!entry.isIntersecting) return;
                             observer.unobserve(entry.target);
-                            reveals.add(stepFor(entry.target));
+                            play(stepFor(entry.target));
                         });
                     }, REVEAL_OBSERVER_OPTIONS);
-
-                    // Items in the first screen join the queue at load, in page order
                     steps.forEach(function (step) {
-                        var box = step.el.getBoundingClientRect();
-                        if (box.top < window.innerHeight && box.bottom > 0) reveals.add(step);
-                        else observer.observe(step.el);
+                        if (step.el.tagName !== 'H1' && step.el.tagName !== 'H2') observer.observe(step.el);
                     });
 
-                    // Leaving animated mode shows every item at once and stops the queue. Switching back then hides nothing
-                    // that was already shown, and nothing replays
+                    // Leaving animated mode shows everything at once and stops watching. Switching back then hides nothing
                     new MutationObserver(function () {
                         if (root.getAttribute('data-motion') === 'animated') return;
                         observer.disconnect();
-                        reveals.pending = [];
                         steps.forEach(function (step) {
-                            step.queued = true;
+                            step.played = true;
                             step.marked.forEach(function (el) { el.classList.add('is-revealed'); });
                         });
                     }).observe(root, { attributes: true, attributeFilter: ['data-motion'] });
                 }).catch(function () {
                     // If the script fails, nothing stays hidden
-                    document.querySelectorAll('h1, h2, .section-text, .reveal-word, .contact-list, #projects li, .skills-list li, hr').forEach(function (el) {
+                    document.querySelectorAll('h1, h2, .section-text, .reveal-word, .contact-list li, #projects li, .skills-list li, hr').forEach(function (el) {
                         el.classList.add('is-revealed');
                     });
                 });
