@@ -295,23 +295,19 @@
                     return words;
                 }
 
-                // Gives each word the delay of its line. Words on one line start together, and the lines are spread
-                // evenly over TOTAL_MS. Lines are measured at the current width
-                function delayLines(words) {
-                    var lines = [];
-                    var lastTop = null;
+                // Splits a body into sentences by their text: a word that ends in . ! or ? closes a sentence. Each sentence
+                // starts together, and the sentences are spread evenly over TOTAL_MS. The split does not depend on the width
+                function delaySentences(words) {
+                    var sentenceOf = [];
+                    var current = 0;
                     words.forEach(function (word) {
-                        var top = Math.round(word.getBoundingClientRect().top);
-                        if (lastTop === null || Math.abs(top - lastTop) > 2) {
-                            lines.push([]);
-                            lastTop = top;
-                        }
-                        lines[lines.length - 1].push(word);
+                        sentenceOf.push(current);
+                        if (/[.!?]$/.test(word.textContent)) current++;
                     });
-                    var step = spread(lines.length);
-                    lines.forEach(function (line, i) {
-                        line.forEach(function (word) { word.style.transitionDelay = (i * step) + 'ms'; });
-                    });
+                    var endsWithStop = words.length > 0 && /[.!?]$/.test(words[words.length - 1].textContent);
+                    var count = endsWithStop || !words.length ? current : current + 1;
+                    var step = spread(count);
+                    words.forEach(function (word, i) { word.style.transitionDelay = (sentenceOf[i] * step) + 'ms'; });
                 }
 
                 // Every step, in page order: the headings, the body text, the lists and the rules
@@ -324,7 +320,7 @@
                         if (el.classList.contains('section-text')) {
                             // Body text: its words fade in line by line. The block itself shows at once, and its words wait hidden
                             var words = splitWords(el);
-                            delayLines(words);
+                            delaySentences(words);
                             el.classList.add('is-revealed');
                             return makeStep(order, el, words);
                         }
