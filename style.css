@@ -373,11 +373,12 @@ html[data-motion="animated"]:not(.reveal-skipped) h2 {
     display: inline-block;
 }
 
-/* Animated mode: each letter starts faded out and 6px low, then rises into place */
+/* Animated mode: each letter starts faded out and 6px low, then rises into place. Each letter fades for 150 ms;
+   the reveal script spreads the letters' starts so the whole heading takes 300 ms */
 html[data-motion="animated"] .letter {
     opacity: 0;
     transform: translateY(6px);
-    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+    transition: opacity 0.15s ease-out, transform 0.15s ease-out;
 }
 
 html[data-motion="animated"] .is-revealed .letter {
@@ -391,19 +392,22 @@ html:not([data-motion="animated"]) .letter {
     transition: none;
 }
 
-/* Animated mode: section text, the Contact list and the list items wait at opacity 0 until their step plays */
+/* Animated mode: body text (until its block is split), the words of body text, the Contact list and the list items
+   wait at opacity 0 until their step plays */
 html[data-motion="animated"]:not(.reveal-skipped) .section-text,
+html[data-motion="animated"]:not(.reveal-skipped) .reveal-word,
 html[data-motion="animated"]:not(.reveal-skipped) .contact-list,
 html[data-motion="animated"]:not(.reveal-skipped) #projects li,
 html[data-motion="animated"]:not(.reveal-skipped) .skills-list li {
     opacity: 0;
 }
 
-html[data-motion="animated"] .section-text,
+/* Each body item fades for 100 ms. Lines and list items start 40 ms apart, from the delays the reveal script sets */
+html[data-motion="animated"] .reveal-word,
 html[data-motion="animated"] .contact-list,
 html[data-motion="animated"] #projects li,
 html[data-motion="animated"] .skills-list li {
-    transition: opacity 0.3s ease-out;
+    transition: opacity 0.1s ease-out;
 }
 
 /* Animated mode: each rule waits scaled to 0, then draws from the left to full width, once */
@@ -420,6 +424,7 @@ html[data-motion="animated"] hr {
 html[data-motion="animated"] h1.is-revealed,
 html[data-motion="animated"] h2.is-revealed,
 html[data-motion="animated"] .section-text.is-revealed,
+html[data-motion="animated"] .reveal-word.is-revealed,
 html[data-motion="animated"] .contact-list.is-revealed,
 html[data-motion="animated"] #projects li.is-revealed,
 html[data-motion="animated"] .skills-list li.is-revealed {
@@ -433,6 +438,7 @@ html[data-motion="animated"] hr.is-revealed {
 
 /* Outside animated mode, the other reveal items never transition either, for the same reason as letters */
 html:not([data-motion="animated"]) .section-text,
+html:not([data-motion="animated"]) .reveal-word,
 html:not([data-motion="animated"]) .contact-list,
 html:not([data-motion="animated"]) #projects li,
 html:not([data-motion="animated"]) .skills-list li,

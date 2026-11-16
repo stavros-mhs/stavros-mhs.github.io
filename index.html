@@ -189,16 +189,15 @@
                 // Observer settings in one constant, for the items that start below the first screen
                 var REVEAL_OBSERVER_OPTIONS = { threshold: 0.2, rootMargin: '0px 0px -10% 0px' };
 
-                // Letters step from left to right over about 500 ms, at 12 to 45 ms per letter
-                var STEP_TOTAL_MS = 500;
-                var STEP_MIN_MS = 12;
-                var STEP_MAX_MS = 45;
+                // A heading takes 300 ms in all: each letter fades for LETTER_MS, and the letters' starts are spread over the rest
+                var HEADING_MS = 300;
+                var LETTER_MS = 150;
 
-                // The items of a list start 40 ms apart within their list step
+                // Body text fades in 100 ms. Each line of text, and each list item, starts ITEM_STAGGER_MS after the line above
+                var BODY_MS = 100;
                 var ITEM_STAGGER_MS = 40;
 
-                // Lengths of the transitions in style.css
-                var TEXT_MS = 300;
+                // The rules draw in 400 ms. These lengths match the transitions in style.css
                 var RULE_MS = 400;
 
                 // Fallback only: a step that gets no transition end still finishes this long after its longest transition
@@ -277,29 +276,82 @@
                     }
                 };
 
-                // Every item of the queue, in page order: the h1 and h2s, the section text, the lists and the rules
+                // The delay of the slowest element in a group, from its inline transition-delay
+                function longestDelay(elements) {
+                    return elements.reduce(function (max, el) {
+                        return Math.max(max, parseFloat(el.style.transitionDelay) || 0);
+                    }, 0);
+                }
+
+                // Wraps each word of a body block in its own span. The text and the spaces between words stay as they are.
+                // Returns the spans in page order
+                function splitWords(block) {
+                    var walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+                    var nodes = [];
+                    while (walker.nextNode()) nodes.push(walker.currentNode);
+
+                    var words = [];
+                    nodes.forEach(function (node) {
+                        var fragment = document.createDocumentFragment();
+                        node.textContent.split(/(\s+)/).forEach(function (part) {
+                            if (part === '') return;
+                            if (/^\s+$/.test(part)) {
+                                fragment.appendChild(document.createTextNode(part));
+                                return;
+                            }
+                            var word = document.createElement('span');
+                            word.className = 'reveal-word';
+                            word.textContent = part;
+                            fragment.appendChild(word);
+                            words.push(word);
+                        });
+                        node.parentNode.replaceChild(fragment, node);
+                    });
+                    return words;
+                }
+
+                // Gives each word the delay of its line. Words on one line start together, and each line starts
+                // ITEM_STAGGER_MS after the line above. Lines are measured at the current width
+                function staggerLines(words) {
+                    var line = -1;
+                    var lastTop = null;
+                    words.forEach(function (word) {
+                        var top = Math.round(word.getBoundingClientRect().top);
+                        if (lastTop === null || Math.abs(top - lastTop) > 2) {
+                            line++;
+                            lastTop = top;
+                        }
+                        word.style.transitionDelay = (line * ITEM_STAGGER_MS) + 'ms';
+                    });
+                }
+
+                // Every item of the queue, in page order: the h1 and h2s, the body text, the lists and the rules
                 function buildSteps() {
                     var els = document.querySelectorAll('h1, h2, .section-text, .contact-list, #projects ul, .skills-list, hr');
                     return Array.prototype.map.call(els, function (el, order) {
                         if (el.tagName === 'H1' || el.tagName === 'H2') {
                             // Each letter ends with an opacity transition. The heading itself has none
                             var letters = Array.prototype.slice.call(el.querySelectorAll('.letter'));
-                            var longestDelay = letters.reduce(function (max, letter) {
-                                return Math.max(max, parseFloat(letter.style.transitionDelay) || 0);
-                            }, 0);
-                            return makeStep(order, el, [el], letters, 'opacity', longestDelay + TEXT_MS);
+                            return makeStep(order, el, [el], letters, 'opacity', longestDelay(letters) + LETTER_MS);
                         }
                         if (el.tagName === 'HR') {
                             return makeStep(order, el, [el], [el], 'transform', RULE_MS);
+                        }
+                        if (el.classList.contains('section-text')) {
+                            // Body text: its words fade in line by line. The block itself shows at once, and its words wait hidden
+                            var words = splitWords(el);
+                            staggerLines(words);
+                            el.classList.add('is-revealed');
+                            return makeStep(order, el, words, words, 'opacity', longestDelay(words) + BODY_MS);
                         }
                         if (el.tagName === 'UL' && !el.classList.contains('contact-list')) {
                             // A list plays as one step, with its items staggered
                             var items = Array.prototype.slice.call(el.querySelectorAll('li'));
                             items.forEach(function (item, i) { item.style.transitionDelay = (i * ITEM_STAGGER_MS) + 'ms'; });
-                            return makeStep(order, el, items, items, 'opacity', (items.length - 1) * ITEM_STAGGER_MS + TEXT_MS);
+                            return makeStep(order, el, items, items, 'opacity', longestDelay(items) + BODY_MS);
                         }
-                        // Section text, and the Contact list, fade as one block
-                        return makeStep(order, el, [el], [el], 'opacity', TEXT_MS);
+                        // The Contact list fades as one block
+                        return makeStep(order, el, [el], [el], 'opacity', BODY_MS);
                     });
                 }
 
@@ -332,8 +384,8 @@
                         visible.appendChild(group);
                     });
 
-                    // Step per letter: 500 ms spread over the letters, clamped to 12 to 45 ms
-                    var step = Math.min(STEP_MAX_MS, Math.max(STEP_MIN_MS, STEP_TOTAL_MS / Math.max(letters.length - 1, 1)));
+                    // The heading takes HEADING_MS in all: the last letter starts after the rest of the time its fade needs
+                    var step = letters.length > 1 ? (HEADING_MS - LETTER_MS) / (letters.length - 1) : 0;
                     letters.forEach(function (letter, i) {
                         letter.style.transitionDelay = (i * step) + 'ms';
                     });
@@ -397,7 +449,7 @@
                     }).observe(root, { attributes: true, attributeFilter: ['data-motion'] });
                 }).catch(function () {
                     // If the script fails, nothing stays hidden
-                    document.querySelectorAll('h1, h2, .section-text, .contact-list, #projects li, .skills-list li, hr').forEach(function (el) {
+                    document.querySelectorAll('h1, h2, .section-text, .reveal-word, .contact-list, #projects li, .skills-list li, hr').forEach(function (el) {
                         el.classList.add('is-revealed');
                     });
                 });
