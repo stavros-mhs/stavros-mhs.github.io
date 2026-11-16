@@ -174,5 +174,105 @@
                 });
             })();
         </script>
+        <script>
+            // Letter reveal: splits the h1 and each h2 into letters. Animated mode only; the styles are in style.css
+            (function () {
+                var root = document.documentElement;
+                if (root.getAttribute('data-motion') !== 'animated') return;
+
+                // Observer settings in one constant, so every h2 uses the same trigger
+                var REVEAL_OBSERVER_OPTIONS = { threshold: 0.2, rootMargin: '0px 0px -10% 0px' };
+
+                // Letters step from left to right over about 500 ms, at 12 to 45 ms per letter
+                var STEP_TOTAL_MS = 500;
+                var STEP_MIN_MS = 12;
+                var STEP_MAX_MS = 45;
+
+                // Shows the heading: its letters move to their end state, or it shows as plain text
+                function reveal(heading) {
+                    // Read layout first, so each letter's start state is set before the transition
+                    heading.getBoundingClientRect();
+                    heading.classList.add('is-revealed');
+                }
+
+                // Replaces the heading's text with a hidden copy and a letter-by-letter copy.
+                // Builds everything before it touches the heading, so a throw leaves the text as it was.
+                function split(heading) {
+                    var text = heading.textContent;
+                    var fragment = document.createDocumentFragment();
+
+                    var copy = document.createElement('span');
+                    copy.className = 'sr-only';
+                    copy.textContent = text;
+                    fragment.appendChild(copy);
+
+                    var visible = document.createElement('span');
+                    visible.setAttribute('aria-hidden', 'true');
+
+                    var letters = [];
+                    text.split(' ').forEach(function (word, i) {
+                        if (i > 0) visible.appendChild(document.createTextNode(' '));
+                        var group = document.createElement('span');
+                        group.className = 'word';
+                        Array.from(word).forEach(function (ch) {
+                            var letter = document.createElement('span');
+                            letter.className = 'letter';
+                            letter.textContent = ch;
+                            group.appendChild(letter);
+                            letters.push(letter);
+                        });
+                        visible.appendChild(group);
+                    });
+
+                    // Step per letter: 500 ms spread over the letters, clamped to 12 to 45 ms
+                    var step = Math.min(STEP_MAX_MS, Math.max(STEP_MIN_MS, STEP_TOTAL_MS / Math.max(letters.length - 1, 1)));
+                    letters.forEach(function (letter, i) {
+                        letter.style.transitionDelay = (i * step) + 'ms';
+                    });
+
+                    fragment.appendChild(visible);
+                    heading.textContent = '';
+                    heading.appendChild(fragment);
+                }
+
+                // Returns true when the heading was split. If the split throws, the heading shows as plain text.
+                function prepare(heading) {
+                    try {
+                        split(heading);
+                        return true;
+                    } catch (e) {
+                        heading.classList.add('is-revealed');
+                        return false;
+                    }
+                }
+
+                // Letter positions are measured in Literata, so the split waits for the font
+                var fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+
+                fontsReady.then(function () {
+                    // Each h2 starts once, when it is first seen, then it is no longer observed
+                    var observer = new IntersectionObserver(function (entries) {
+                        entries.forEach(function (entry) {
+                            if (!entry.isIntersecting) return;
+                            observer.unobserve(entry.target);
+                            reveal(entry.target);
+                        });
+                    }, REVEAL_OBSERVER_OPTIONS);
+
+                    // The h1 starts once it is split
+                    var h1 = document.querySelector('h1');
+                    if (h1 && prepare(h1)) reveal(h1);
+
+                    document.querySelectorAll('h2').forEach(function (h2) {
+                        if (prepare(h2)) observer.observe(h2);
+                    });
+                }).catch(function () {
+                    // If the script fails, no heading stays hidden
+                    document.querySelectorAll('h1, h2').forEach(function (heading) {
+                        heading.classList.add('is-revealed');
+                    });
+                });
+            })();
+        </script>
     </body>
     </html>
