@@ -56,13 +56,14 @@
             </section>
 
             <section>
+                <div class="section-text">
                     I'm a Computer Science undergraduate at the National and Kapodistrian University of Athens (NKUA).
                     I've worked on applied AI, my project Thesis <a href="https://github.com/stavros-mhs/Ginny">Ginny</a>, is a multi-agent, homework solving system built to
                     help educators assess the robustness of their assignments to LLM systems.
                     <br>
                     <br>
                     I'm passionate about tooling and efficient workflows.
-
+                </div>
             </section>
 
             <hr>
@@ -92,7 +93,7 @@
             <section id="hobbies">
                 <h2>Hobbies</h2>
 
-                music, board/video games, basketball, coding
+                <div class="section-text">music, board/video games, basketball, coding</div>
             </section>
 
             <hr>
@@ -175,12 +176,17 @@
             })();
         </script>
         <script>
-            // Letter reveal: splits the h1 and each h2 into letters. Animated mode only; the styles are in style.css
+            // Reveal queue: the h1, the h2s, the section text, the lists and the rules play one at a time, in page order.
+            // Animated mode only. The styles are in style.css
             (function () {
                 var root = document.documentElement;
-                if (root.getAttribute('data-motion') !== 'animated') return;
+                if (root.getAttribute('data-motion') !== 'animated') {
+                    // No reveal in minimal mode. The marker keeps the hidden states off if the mode is switched to animated later
+                    root.classList.add('reveal-skipped');
+                    return;
+                }
 
-                // Observer settings in one constant, so every h2 uses the same trigger
+                // Observer settings in one constant, for the items that start below the first screen
                 var REVEAL_OBSERVER_OPTIONS = { threshold: 0.2, rootMargin: '0px 0px -10% 0px' };
 
                 // Letters step from left to right over about 500 ms, at 12 to 45 ms per letter
@@ -188,11 +194,113 @@
                 var STEP_MIN_MS = 12;
                 var STEP_MAX_MS = 45;
 
-                // Shows the heading: its letters move to their end state, or it shows as plain text
-                function reveal(heading) {
-                    // Read layout first, so each letter's start state is set before the transition
-                    heading.getBoundingClientRect();
-                    heading.classList.add('is-revealed');
+                // The items of a list start 80 ms apart within their list step
+                var ITEM_STAGGER_MS = 80;
+
+                // Lengths of the transitions in style.css
+                var TEXT_MS = 600;
+                var RULE_MS = 800;
+
+                // Fallback only: a step that gets no transition end still finishes this long after its longest transition
+                var FALLBACK_MARGIN_MS = 1000;
+
+                // A step plays one item. el is the item and marked gets the class that starts it. The step ends when each
+                // of its targets has finished a transition of prop. span is the length of its longest transition
+                function makeStep(order, el, marked, targets, prop, span) {
+                    return { order: order, el: el, marked: marked, targets: targets, prop: prop, span: span, queued: false };
+                }
+
+                // Starts one step, and calls done when its last transition ends (transitionend). If the mode changes
+                // mid-step, the transition is cancelled instead, which also counts as its end
+                function playStep(step, done) {
+                    var finished = false;
+                    var waiting = step.targets.length;
+                    var timer = null;
+
+                    function finish() {
+                        if (finished) return;
+                        finished = true;
+                        clearTimeout(timer);
+                        done();
+                    }
+
+                    function start() {
+                        step.marked.forEach(function (el) { el.classList.add('is-revealed'); });
+                    }
+
+                    // Nothing to wait for, or minimal mode: the item shows at once
+                    if (!waiting || root.getAttribute('data-motion') !== 'animated') {
+                        start();
+                        finish();
+                        return;
+                    }
+
+                    // Read the layout first, so each target's start state is set before its class changes
+                    root.getBoundingClientRect();
+
+                    step.targets.forEach(function (target) {
+                        function settle(e) {
+                            // Only this target's own transition counts, not a link's colour change inside it
+                            if (e.target !== target || e.propertyName !== step.prop) return;
+                            target.removeEventListener('transitionend', settle);
+                            target.removeEventListener('transitioncancel', settle);
+                            waiting--;
+                            if (waiting === 0) finish();
+                        }
+                        target.addEventListener('transitionend', settle);
+                        target.addEventListener('transitioncancel', settle);
+                    });
+
+                    timer = setTimeout(finish, step.span + FALLBACK_MARGIN_MS);
+                    start();
+                }
+
+                // The queue: plays the earliest pending step next, one at a time
+                var reveals = {
+                    pending: [],
+                    busy: false,
+                    add: function (step) {
+                        if (step.queued) return; // each item plays once
+                        step.queued = true;
+                        this.pending.push(step);
+                        this.pending.sort(function (a, b) { return a.order - b.order; });
+                        this.next();
+                    },
+                    next: function () {
+                        if (this.busy || !this.pending.length) return;
+                        var queue = this;
+                        this.busy = true;
+                        playStep(this.pending.shift(), function () {
+                            queue.busy = false;
+                            queue.next();
+                        });
+                    }
+                };
+
+                // Every item of the queue, in page order: the h1 and h2s, the section text, the lists and the rules
+                function buildSteps() {
+                    var els = document.querySelectorAll('h1, h2, .section-text, .contact-list, #projects ul, .skills-list, hr');
+                    return Array.prototype.map.call(els, function (el, order) {
+                        if (el.tagName === 'H1' || el.tagName === 'H2') {
+                            // Each letter ends with an opacity transition. The heading itself has none
+                            var letters = Array.prototype.slice.call(el.querySelectorAll('.letter'));
+                            var longestDelay = letters.reduce(function (max, letter) {
+                                return Math.max(max, parseFloat(letter.style.transitionDelay) || 0);
+                            }, 0);
+                            return makeStep(order, el, [el], letters, 'opacity', longestDelay + TEXT_MS);
+                        }
+                        if (el.tagName === 'HR') {
+                            return makeStep(order, el, [el], [el], 'transform', RULE_MS);
+                        }
+                        if (el.tagName === 'UL' && !el.classList.contains('contact-list')) {
+                            // A list plays as one step, with its items staggered
+                            var items = Array.prototype.slice.call(el.querySelectorAll('li'));
+                            items.forEach(function (item, i) { item.style.transitionDelay = (i * ITEM_STAGGER_MS) + 'ms'; });
+                            return makeStep(order, el, items, items, 'opacity', (items.length - 1) * ITEM_STAGGER_MS + TEXT_MS);
+                        }
+                        // Section text, and the Contact list, fade as one block
+                        return makeStep(order, el, [el], [el], 'opacity', TEXT_MS);
+                    });
                 }
 
                 // Replaces the heading's text with a hidden copy and a letter-by-letter copy.
@@ -250,26 +358,47 @@
                 var fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
 
                 fontsReady.then(function () {
-                    // Each h2 starts once, when it is first seen, then it is no longer observed
+                    // Split the headings first. A heading whose split throws shows as plain text
+                    var h1 = document.querySelector('h1');
+                    if (h1) prepare(h1);
+                    document.querySelectorAll('h2').forEach(function (h2) { prepare(h2); });
+
+                    var steps = buildSteps();
+                    function stepFor(el) {
+                        return steps.find(function (step) { return step.el === el; });
+                    }
+
+                    // One observer for the items below the first screen. Each one joins the queue once, then is unobserved
                     var observer = new IntersectionObserver(function (entries) {
                         entries.forEach(function (entry) {
                             if (!entry.isIntersecting) return;
                             observer.unobserve(entry.target);
-                            reveal(entry.target);
+                            reveals.add(stepFor(entry.target));
                         });
                     }, REVEAL_OBSERVER_OPTIONS);
 
-                    // The h1 starts once it is split
-                    var h1 = document.querySelector('h1');
-                    if (h1 && prepare(h1)) reveal(h1);
-
-                    document.querySelectorAll('h2').forEach(function (h2) {
-                        if (prepare(h2)) observer.observe(h2);
+                    // Items in the first screen join the queue at load, in page order
+                    steps.forEach(function (step) {
+                        var box = step.el.getBoundingClientRect();
+                        if (box.top < window.innerHeight && box.bottom > 0) reveals.add(step);
+                        else observer.observe(step.el);
                     });
+
+                    // Leaving animated mode shows every item at once and stops the queue. Switching back then hides nothing
+                    // that was already shown, and nothing replays
+                    new MutationObserver(function () {
+                        if (root.getAttribute('data-motion') === 'animated') return;
+                        observer.disconnect();
+                        reveals.pending = [];
+                        steps.forEach(function (step) {
+                            step.queued = true;
+                            step.marked.forEach(function (el) { el.classList.add('is-revealed'); });
+                        });
+                    }).observe(root, { attributes: true, attributeFilter: ['data-motion'] });
                 }).catch(function () {
-                    // If the script fails, no heading stays hidden
-                    document.querySelectorAll('h1, h2').forEach(function (heading) {
-                        heading.classList.add('is-revealed');
+                    // If the script fails, nothing stays hidden
+                    document.querySelectorAll('h1, h2, .section-text, .contact-list, #projects li, .skills-list li, hr').forEach(function (el) {
+                        el.classList.add('is-revealed');
                     });
                 });
             })();
