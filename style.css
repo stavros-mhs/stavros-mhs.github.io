@@ -22,7 +22,7 @@
 }
 
 body {
-    font-family: 'Literata', Georgia, 'Times New Roman', serif;
+    font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
     background-color: var(--bg);
     color: var(--text);
     margin: 0;
@@ -265,6 +265,14 @@ h2 {
     margin-bottom: 0.5rem;
     font-weight: 500;
     line-height: 1.2;
+}
+
+/* Headings are code-style: a monospace label in a box, like inline code. The box uses the surface colour */
+h1, h2 {
+    display: table;
+    background: var(--surface);
+    padding: 0.1em 0.5em;
+    border-radius: 6px;
 }
 
 /* Bold text: lighter than the browser's default bold, to match the headings */
