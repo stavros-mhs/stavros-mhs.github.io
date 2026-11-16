@@ -377,7 +377,7 @@ html[data-motion="animated"]:not(.reveal-skipped) h2 {
 html[data-motion="animated"] .letter {
     opacity: 0;
     transform: translateY(6px);
-    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
 }
 
 html[data-motion="animated"] .is-revealed .letter {
@@ -403,7 +403,7 @@ html[data-motion="animated"] .section-text,
 html[data-motion="animated"] .contact-list,
 html[data-motion="animated"] #projects li,
 html[data-motion="animated"] .skills-list li {
-    transition: opacity 0.6s ease-out;
+    transition: opacity 0.3s ease-out;
 }
 
 /* Animated mode: each rule waits scaled to 0, then draws from the left to full width, once */
@@ -413,7 +413,7 @@ html[data-motion="animated"]:not(.reveal-skipped) hr {
 }
 
 html[data-motion="animated"] hr {
-    transition: transform 0.8s ease-out;
+    transition: transform 0.4s ease-out;
 }
 
 /* A step that has played shows its item */
