@@ -30,10 +30,17 @@
     <body>
         <nav class="navbar">
             <div class="nav-container">
-                <a href="#projects"># projects/</a>
-                <a href="#skills"># skills/</a>
-                <a href="#hobbies"># hobbies/</a>
-                <a href="#contact"># contact/</a>
+                <div class="nav-links">
+                    <a href="#projects">projects/</a> <a href="#skills">skills/</a> <a href="#hobbies">hobbies/</a> <a href="#contact">contact/</a>
+                </div>
+
+                <button type="button" class="nav-burger" id="burger" aria-expanded="false" aria-controls="ls-panel" aria-label="Menu" hidden>
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="3" y="5" width="18" height="2" />
+                        <rect x="3" y="11" width="18" height="2" />
+                        <rect x="3" y="17" width="18" height="2" />
+                    </svg>
+                </button>
 
                 <input type="checkbox" id="toggle" checked>
                 <div class="display">
@@ -49,10 +56,20 @@
                     </label>
                 </div>
             </div>
+
+            <div class="ls-panel" id="ls-panel" hidden>
+                <p class="ls-command"><span class="ls-command-text">ls -l</span></p>
+                <ul class="ls-list">
+                    <li><a href="#projects">drwxr-xr-x  2 guest guest 4096 Nov 17 projects/</a></li>
+                    <li><a href="#skills">drwxr-xr-x  2 guest guest 4096 Nov 17 skills/</a></li>
+                    <li><a href="#hobbies">drwxr-xr-x  2 guest guest 4096 Nov 17 hobbies/</a></li>
+                    <li><a href="#contact">drwxr-xr-x  2 guest guest 4096 Nov 17 contact/</a></li>
+                </ul>
+            </div>
         </nav>
         <main>
             <section>
-                <h1># whoami</h1>
+                <h1>whoami</h1>
             </section>
 
             <section>
@@ -69,7 +86,7 @@
             <hr>
 
             <section id="projects">
-                <h2># projects/</h2>
+                <h2>projects/</h2>
                 <ul>
                     <li><a href="https://github.com/stavros-mhs/Ginny">Ginny - An Autonomous Homework Solving System (BSc Thesis)</a></li>
                     <li><a href="https://github.com/stavros-mhs/aralloc">Aralloc - A Simple Memory Arena Allocator for C/C++</a></li>
@@ -79,7 +96,7 @@
             <hr>
 
             <section id="skills">
-                <h2># SKILLS.md</h2>
+                <h2>SKILLS.md</h2>
                 <ul class="skills-list">
                     <li> <strong>Languages:</strong> Python, C/C++, Bash, SQL, MATLAB </li>
                     <li> <strong>Frameworks &amp; Libraries:</strong> Langgraph, Langchain, pytest </li>
@@ -91,7 +108,7 @@
             <hr>
 
             <section id="hobbies">
-                <h2># hobbies.txt</h2>
+                <h2>hobbies.txt</h2>
 
                 <div class="section-text">music, board/video games, basketball, coding</div>
             </section>
@@ -99,7 +116,7 @@
             <hr>
 
             <section id="contact">
-                <h2># CONTACT.md</h2>
+                <h2>CONTACT.md</h2>
                 <ul class="contact-list">
                     <li>
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -173,6 +190,83 @@
                     sync();
                     try { localStorage.setItem('motion', next); } catch (e) {}
                 });
+            })();
+        </script>
+        <script>
+            // Phone navigation. Below 600px the four names give way to a burger, which opens an ls -l listing. Without JavaScript
+            // the names stay in the navbar as links, and the burger and the listing stay hidden. The styles are in style.css
+            (function () {
+                var root = document.documentElement;
+                var burger = document.getElementById('burger');
+                var panel = document.getElementById('ls-panel');
+                var phone = window.matchMedia('(max-width: 600px)');
+
+                // Time between the starts of the typed letters, and between the starts of the listing lines (ms)
+                var TYPE_MS = 60;
+                var LINE_MS = 80;
+
+                // The command is split into letters, which fade in one after another. The whole command stays in a visually
+                // hidden copy, so screen readers read it in full. The letters are hidden from them
+                var command = panel.querySelector('.ls-command-text');
+                var text = command.textContent;
+                var typed = document.createElement('span');
+                typed.setAttribute('aria-hidden', 'true');
+                Array.prototype.forEach.call(text, function (ch, i) {
+                    var letter = document.createElement('span');
+                    letter.className = 'ls-char';
+                    letter.style.setProperty('--delay', (i * TYPE_MS) + 'ms');
+                    letter.textContent = ch;
+                    typed.appendChild(letter);
+                });
+                var copy = document.createElement('span');
+                copy.className = 'sr-only';
+                copy.textContent = text;
+                command.textContent = '';
+                command.appendChild(copy);
+                command.appendChild(typed);
+
+                // The listing lines start once the command has typed, each one LINE_MS after the line above
+                var typedMs = text.length * TYPE_MS;
+                Array.prototype.forEach.call(panel.querySelectorAll('.ls-list li'), function (li, i) {
+                    li.style.setProperty('--delay', (typedMs + i * LINE_MS) + 'ms');
+                });
+
+                function setOpen(open) {
+                    panel.hidden = !open;
+                    burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+                }
+
+                // The burger toggles the panel. Focus stays on the burger, whether the panel opens or closes
+                burger.addEventListener('click', function () {
+                    setOpen(panel.hidden);
+                    burger.focus({ preventScroll: true });
+                });
+
+                // Escape closes the panel and returns focus to the burger
+                document.addEventListener('keydown', function (e) {
+                    if (e.key === 'Escape' && !panel.hidden) {
+                        setOpen(false);
+                        burger.focus({ preventScroll: true });
+                    }
+                });
+
+                // Following a link closes the panel, and the link still takes the reader to its section. That jump moves focus
+                // off the burger, so focus goes back to the burger after the jump
+                Array.prototype.forEach.call(panel.querySelectorAll('a'), function (link) {
+                    link.addEventListener('click', function () {
+                        setOpen(false);
+                        setTimeout(function () { burger.focus({ preventScroll: true }); }, 0);
+                    });
+                });
+
+                // Growing past phone width with the panel open closes it
+                phone.addEventListener('change', function (e) {
+                    if (!e.matches) setOpen(false);
+                });
+
+                // The script is running, so the burger replaces the names on phones
+                burger.removeAttribute('hidden');
+                root.classList.add('menu-ready');
             })();
         </script>
         <script>

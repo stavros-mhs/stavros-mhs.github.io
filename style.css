@@ -237,8 +237,11 @@ input[type=checkbox]:checked + .display label .circle .moon {
     color: var(--link);
 }
 
-.nav-container a:hover {
-    color: var(--link-hover);
+/* Hover effects sit in this query, so a touch device does not keep a hover state after a tap */
+@media (hover: hover) {
+    .nav-container a:hover {
+        color: var(--link-hover);
+    }
 }
 
 /* Main content */
@@ -469,6 +472,120 @@ html:not([data-motion="animated"]) hr {
     white-space: nowrap;
 }
 
+/* Navbar names: one line of ls output on desktop. The names are separated by spaces and do not wrap */
+.nav-links {
+    white-space: nowrap;
+}
+
+/* Burger: shown on phones, once the script runs. Its three bars are inline SVG in the link colour */
+.nav-burger {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--link);
+    cursor: pointer;
+}
+
+.nav-burger[hidden] {
+    display: none;
+}
+
+.nav-burger svg {
+    width: 20px;
+    height: 20px;
+    position: static;
+    fill: currentColor;
+    transition: none;
+}
+
+.nav-burger:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 3px;
+}
+
+@media (hover: hover) {
+    .nav-burger:hover {
+        color: var(--link-hover);
+    }
+}
+
+/* The ls -l panel: under the navbar on phones. It stays hidden without JavaScript, and on desktop */
+.ls-panel {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    padding: 0.75rem 1rem;
+    background: var(--bg);
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.75rem;
+    text-align: left;
+}
+
+@media (min-width: 601px) {
+    .ls-panel {
+        display: none;
+    }
+}
+
+.ls-command {
+    margin: 0 0 0.5rem;
+    color: var(--text);
+    white-space: pre;
+}
+
+/* A listing line keeps its spacing. The list runs to the panel's right edge, to give a line the most room. It scrolls
+   sideways inside the panel only on a phone narrower than a full listing line */
+.ls-list {
+    margin: 0 -1rem 0 0;
+    padding: 0;
+    list-style: none;
+    overflow-x: auto;
+}
+
+.ls-list li {
+    margin: 0;
+}
+
+.ls-list a {
+    display: block;
+    white-space: pre;
+    color: var(--link);
+}
+
+/* Animated mode: each typed letter fades in at its delay, then each listing line fades in at its delay. Both start with
+   opacity 0 and stay at 1 once they have played. The script sets the delays, and the animations run each time the panel opens */
+html[data-motion="animated"] .ls-char {
+    animation: ls-fade 0.06s linear var(--delay, 0ms) both;
+}
+
+html[data-motion="animated"] .ls-list li {
+    animation: ls-fade 0.25s ease-out var(--delay, 0ms) both;
+}
+
+@keyframes ls-fade {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* Minimal mode: everything shows at once, with no animation */
+html:not([data-motion="animated"]) .ls-char,
+html:not([data-motion="animated"]) .ls-list li {
+    animation: none;
+}
+
 /* Mobile responsive */
 @media (max-width: 600px) {
     body {
@@ -545,5 +662,17 @@ html:not([data-motion="animated"]) hr {
 
     h2 {
         font-size: 1.4rem;
+    }
+
+    .nav-burger {
+        display: inline-flex;
+    }
+
+    .menu-ready .nav-links {
+        display: none;
+    }
+
+    .menu-ready .nav-container {
+        justify-content: space-between;
     }
 }
