@@ -1,0 +1,4 @@
+- **Languages:** Python, C/C++, Bash, SQL, MATLAB
+- **Frameworks & Libraries:** Langgraph, Langchain, pytest
+- **Tools & Platforms:** Git, Github Actions, Linux, QEMU, GDB, Latex
+- **Concepts:** LLM agents, CI/CD Pipelines

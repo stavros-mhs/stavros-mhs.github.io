@@ -63,106 +63,31 @@
                 <p class="ls-line">├── <a href="#/projects/">projects/</a></p>
                 <p class="ls-line">├── <a href="#/skills/">skills/</a></p>
                 <p class="ls-line">└── <a href="#/contact/">contact/</a></p>
-                <p class="ls-line"> </p>
+                <p class="ls-line ls-blank"></p>
                 <p class="ls-line">4 directories</p>
             </div>
         </nav>
 
-        <div class="landing">
-            <div class="terminal" id="terminal" role="region" aria-label="Terminal">
-                <p class="term-line" id="term-cmd-1"><span class="term-prompt">~$</span> whoami</p>
-                <p class="term-line term-print" id="term-print-1">stavros-mhs</p>
-                <p class="term-line" id="term-cmd-2"><span class="term-prompt">~$</span> ls -l</p>
-                <div class="term-output" id="term-output">
-                    <p class="term-line term-out">~/</p>
-                    <p class="term-line term-out">├── <a href="#/user/">user/</a></p>
-                    <p class="term-line term-out">├── <a href="#/projects/">projects/</a></p>
-                    <p class="term-line term-out">├── <a href="#/skills/">skills/</a></p>
-                    <p class="term-line term-out">└── <a href="#/contact/">contact/</a></p>
-                    <p class="term-line term-out"> </p>
-                    <p class="term-line term-out">4 directories</p>
+        <main>
+            <h1 class="sr-only">stavros-mhs</h1>
+
+            <div class="landing">
+                <div class="terminal" id="terminal" role="region" aria-label="Terminal">
+                    <p class="term-line" id="term-cmd-1"><span class="term-prompt">~$</span> whoami</p>
+                    <p class="term-line term-fade" id="term-print-1">stavros-mhs</p>
+                    <p class="term-line" id="term-cmd-2"><span class="term-prompt">~$</span> ls -l</p>
+                    <div class="term-output" id="term-output">
+                        <p class="term-line term-fade">~/</p>
+                        <p class="term-line term-fade">├── <a href="#/user/">user/</a></p>
+                        <p class="term-line term-fade">├── <a href="#/projects/">projects/</a></p>
+                        <p class="term-line term-fade">├── <a href="#/skills/">skills/</a></p>
+                        <p class="term-line term-fade">└── <a href="#/contact/">contact/</a></p>
+                        <p class="term-line term-fade term-blank"></p>
+                        <p class="term-line term-fade">4 directories</p>
+                    </div>
+                    <p class="term-line term-fade" id="term-prompt-end"><span class="term-prompt">~$</span> </p>
                 </div>
             </div>
-        </div>
-
-        <main>
-            <section>
-                <h1>whoami</h1>
-            </section>
-
-            <section>
-                <div class="section-text">
-                    I'm a Computer Science undergraduate at the National and Kapodistrian University of Athens (NKUA).
-                    I've worked on applied AI, my project Thesis <a href="https://github.com/stavros-mhs/Ginny">Ginny</a>, is a multi-agent, homework solving system built to
-                    help educators assess the robustness of their assignments to LLM systems.
-                    <br>
-                    <br>
-                    I'm passionate about tooling and efficient workflows.
-                </div>
-            </section>
-
-            <hr>
-
-            <section id="projects">
-                <h2>projects/</h2>
-                <ul>
-                    <li><a href="https://github.com/stavros-mhs/Ginny">Ginny - An Autonomous Homework Solving System (BSc Thesis)</a></li>
-                    <li><a href="https://github.com/stavros-mhs/aralloc">Aralloc - A Simple Memory Arena Allocator for C/C++</a></li>
-                </ul>
-            </section>
-
-            <hr>
-
-            <section id="skills">
-                <h2>SKILLS.md</h2>
-                <ul class="skills-list">
-                    <li> <strong>Languages:</strong> Python, C/C++, Bash, SQL, MATLAB </li>
-                    <li> <strong>Frameworks &amp; Libraries:</strong> Langgraph, Langchain, pytest </li>
-                    <li> <strong>Tools &amp; Platforms:</strong> Git, Github Actions, Linux, QEMU, GDB, Latex</li>
-                    <li> <strong> Concepts:</strong> LLM agents, CI/CD Pipelines</li>
-                </ul>
-            </section>
-
-            <hr>
-
-            <section id="hobbies">
-                <h2>hobbies.txt</h2>
-
-                <div class="section-text">music, board/video games, basketball, coding</div>
-            </section>
-
-            <hr>
-
-            <section id="contact">
-                <h2>CONTACT.md</h2>
-                <ul class="contact-list">
-                    <li>
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="2" y="4" width="20" height="16" rx="2"/>
-                            <path d="M2 7l10 7 10-7"/>
-                        </svg>
-                        <a href="mailto:stavros.mhs@gmail.com">stavros.mhs@gmail.com</a>
-                    </li>
-                    <li>
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.84 1.236 1.84 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.418-1.305.762-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.468-2.38 1.235-3.22-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.3 1.23A11.52 11.52 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.29-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.233 1.91 1.233 3.22 0 4.61-2.807 5.625-5.479 5.92.43.372.823 1.102.823 2.222 0 1.606-.015 2.898-.015 3.293 0 .322.216.694.825.576C20.565 21.796 24 17.298 24 12c0-6.63-5.37-12-12-12z"/>
-                        </svg>
-                        <a href="https://github.com/stavros-mhs/">github.com/stavros-mhs</a>
-                    </li>
-                    <li>
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                            <polyline points="14 2 14 8 20 8"/>
-                            <line x1="16" y1="13" x2="8" y2="13"/>
-                            <line x1="16" y1="17" x2="8" y2="17"/>
-                            <polyline points="10 9 9 9 8 9"/>
-                        </svg>
-                        <a href="cv.pdf" target="_blank" rel="noopener">view CV</a>
-                    </li>
-                </ul>
-            </section>
-
-            <hr>
         </main>
 
         <footer>
@@ -257,295 +182,161 @@
                 root.classList.add('menu-ready');
             })();
         </script>
+
         <script>
-            // Landing terminal: types whoami and ls -l, prints the tree, then the navbar drops in. Animated mode only. The times are
-            // in ms from the start of the animations, and the constants below set them. Minimal mode and the no-JavaScript case
-            // show the final text. The styles are in style.css
+            // Landing terminal. Animated mode only. It types whoami and ls -l at human speed. The printed lines fade in at the
+            // output pace, and a new prompt follows the output. A blinking cursor marks the end of the text being typed or printed.
+            // Then the navbar drops in. The times are in ms from the start, and the constants below set them. Without JavaScript,
+            // and in minimal mode, the text shows as it stands. The styles are in style.css
             function runTerminal() {
                 var root = document.documentElement;
                 if (root.getAttribute('data-motion') !== 'animated') return;
 
-                // Times in ms. The terminal fades in for 500 ms, in the CSS, and the first command starts when it has faded in
-                var FADE_MS = 500;
-                var TYPE_MS = 60;        // one character
-                var PAUSE_MS = 300;      // after a command has typed, before its output
-                var GAP_MS = 400;        // after the output has printed, before the next command
-                var LINE_MS = 120;       // between output lines
-                var LINE_FADE_MS = 250;  // each output line fades in (the CSS sets the length)
+                // Times in ms. The fade (1500 ms, ease-out) and the navbar's drop (500 ms, ease-out) are in the CSS
+                var FADE_MS = 1500;       // the terminal fades in
+                var AFTER_FADE_MS = 400;  // after the fade, before the first command
+                var PAUSE_MS = 300;       // after a command, before the output it produces
+                var GAP_MS = 400;         // after a printed line has faded in, before the next command
+                var LINE_MS = 120;        // the output pace: each line starts this long after the line above
+                var LINE_FADE_MS = 250;   // each printed line fades in over this long
+                var NAV_GAP_MS = 400;     // after the last output line has faded in, before the navbar drops
+                var TYPE_MIN_MS = 90;     // a typed character follows the one before after a random interval in this range
+                var TYPE_MAX_MS = 170;
 
-                var cmd1 = document.getElementById('term-cmd-1');
-                var print1 = document.getElementById('term-print-1');
-                var cmd2 = document.getElementById('term-cmd-2');
-                var outLines = Array.prototype.slice.call(document.querySelectorAll('#term-output .term-out'));
+                var terminal = document.getElementById('terminal');
                 var navbar = document.querySelector('.navbar');
+                var cmd1 = document.getElementById('term-cmd-1');
+                var cmd2 = document.getElementById('term-cmd-2');
+                var printed = document.getElementById('term-print-1');
+                var outLines = Array.prototype.slice.call(document.querySelectorAll('#term-output .term-line'));
+                var promptEnd = document.getElementById('term-prompt-end');
+                var lines = [printed].concat(outLines, [promptEnd]);
 
-                function setDelay(el, ms) {
-                    el.style.setProperty('--delay', ms + 'ms');
-                }
-
-                // Splits a command line into characters, each shown at its time. The whole line stays in a visually hidden copy,
-                // so screen readers read it in full and the characters are hidden from them. Returns the time the last character types
-                function typeLine(line, start) {
-                    var full = line.textContent;
-                    var copy = document.createElement('span');
-                    copy.className = 'sr-only';
-                    copy.textContent = full;
-
-                    var typed = document.createElement('span');
-                    typed.setAttribute('aria-hidden', 'true');
-                    var n = 0;
-                    Array.prototype.forEach.call(line.childNodes, function (node) {
-                        // The prompt keeps its class, so it keeps its colour
-                        var cls = node.nodeType === 1 ? node.className : '';
-                        Array.prototype.forEach.call(node.textContent, function (ch) {
-                            var c = document.createElement('span');
-                            c.className = ('term-char ' + cls).trim();
-                            c.textContent = ch;
-                            setDelay(c, start + n * TYPE_MS);
-                            typed.appendChild(c);
-                            n++;
-                        });
+                // Wraps each character of a node's text in its own span, which starts hidden. The structure stays, so the prompt
+                // keeps its colour. The spans are added to the list in page order
+                function splitChars(node, spans) {
+                    Array.prototype.slice.call(node.childNodes).forEach(function (child) {
+                        if (child.nodeType === 3) {
+                            var fragment = document.createDocumentFragment();
+                            Array.prototype.forEach.call(child.textContent, function (ch) {
+                                var span = document.createElement('span');
+                                span.className = 'term-char';
+                                span.textContent = ch;
+                                span.style.opacity = '0';
+                                fragment.appendChild(span);
+                                spans.push(span);
+                            });
+                            node.replaceChild(fragment, child);
+                        } else if (child.nodeType === 1) {
+                            splitChars(child, spans);
+                        }
                     });
-
-                    line.textContent = '';
-                    line.appendChild(copy);
-                    line.appendChild(typed);
-                    return start + n * TYPE_MS;
+                    return spans;
                 }
 
-                // The timeline: each step starts when the one before it has finished
-                var cmd1End = typeLine(cmd1, FADE_MS);
-                var printAt = cmd1End + PAUSE_MS;
-                setDelay(print1, printAt);
-                var cmd2End = typeLine(cmd2, printAt + GAP_MS);
-                var outStart = cmd2End + PAUSE_MS;
-                var outShown = outStart;
-                outLines.forEach(function (line, i) {
-                    var at = outStart + i * LINE_MS;
-                    setDelay(line, at);
-                    outShown = Math.max(outShown, at + LINE_FADE_MS);
-                });
+                // The schedule. Each event shows one character or one printed line at its time. A typed character follows the one
+                // before after a random interval. The first character of a command shows at the command's start
+                var events = [];
+                function typeAt(spans, start) {
+                    var at = start;
+                    spans.forEach(function (span, i) {
+                        if (i > 0) at += TYPE_MIN_MS + Math.random() * (TYPE_MAX_MS - TYPE_MIN_MS);
+                        events.push({ span: span, at: at });
+                    });
+                    return at;
+                }
+                // Returns the time the line has faded in
+                function printAt(line, at) {
+                    events.push({ line: line, at: at });
+                    return at + LINE_FADE_MS;
+                }
 
-                // The navbar drops in once the output has printed. Its length is set in the CSS (500 ms)
-                navbar.style.setProperty('--drop-delay', outShown + 'ms');
+                var typed1End = typeAt(splitChars(cmd1, []), FADE_MS + AFTER_FADE_MS);
+                var printedIn = printAt(printed, typed1End + PAUSE_MS);
+                var typed2End = typeAt(splitChars(cmd2, []), printedIn + GAP_MS);
+                var treeStart = typed2End + PAUSE_MS;
+                var lastLineIn = treeStart;
+                outLines.forEach(function (line, i) {
+                    lastLineIn = printAt(line, treeStart + i * LINE_MS);
+                });
+                printAt(promptEnd, lastLineIn);      // the new prompt follows the output, once the output has faded in
+                var navStart = lastLineIn + NAV_GAP_MS;
+
+                // The cursor: a block the height of the text, in the body text colour. It sits at the end of the text being typed or
+                // printed. The script moves it with transform, so its blink is not restarted
+                var cursor = document.createElement('span');
+                cursor.className = 'term-cursor';
+                cursor.setAttribute('aria-hidden', 'true');
+                terminal.appendChild(cursor);
+
+                function placeCursor(x, y, w, h) {
+                    var box = terminal.getBoundingClientRect();
+                    cursor.style.width = w + 'px';
+                    cursor.style.height = h + 'px';
+                    cursor.style.transform = 'translate(' + (x - box.left) + 'px, ' + (y - box.top) + 'px)';
+                }
+                // After a character: at its right edge
+                function cursorAfterChar(span) {
+                    var r = span.getBoundingClientRect();
+                    placeCursor(r.right, r.top, r.width, r.height);
+                }
+                // At the end of a line: after its last text, or at the start of a blank line
+                function cursorAtLineEnd(line) {
+                    var size = parseFloat(getComputedStyle(line).fontSize);
+                    var range = document.createRange();
+                    range.selectNodeContents(line);
+                    var rects = Array.prototype.filter.call(range.getClientRects(), function (r) { return r.width > 0; });
+                    var last = rects[rects.length - 1];
+                    if (last) {
+                        placeCursor(last.right, last.top, size * 0.625, last.height);
+                    } else {
+                        var box = line.getBoundingClientRect();
+                        placeCursor(box.left, box.top, size * 0.625, box.height);
+                    }
+                }
+
+                // Everything starts hidden. The cursor starts before the first character
+                events.forEach(function (event) {
+                    if (event.span) event.span.style.opacity = '0';
+                });
+                lines.forEach(function (line) { line.style.opacity = '0'; });
+                var first = events[0].span.getBoundingClientRect();
+                placeCursor(first.left, first.top, first.width, first.height);
+                navbar.style.setProperty('--drop-delay', navStart + 'ms');
                 root.classList.add('term-live');
 
-                // Leaving animated mode shows everything at once. Switching back later does not replay the timeline
+                // Each event shows at its time, and the cursor moves to it
+                var timers = [];
+                var t0 = performance.now();
+                events.forEach(function (event) {
+                    timers.push(setTimeout(function () {
+                        if (event.span) {
+                            event.span.style.opacity = '1';
+                            cursorAfterChar(event.span);
+                        } else {
+                            event.line.style.opacity = '1';
+                            cursorAtLineEnd(event.line);
+                        }
+                    }, Math.max(0, event.at - (performance.now() - t0))));
+                });
+
+                // Leaving animated mode shows everything at once and stops the timeline. Switching back later does not replay it
                 new MutationObserver(function () {
-                    if (root.getAttribute('data-motion') !== 'animated') root.classList.remove('term-live');
+                    if (root.getAttribute('data-motion') === 'animated') return;
+                    timers.forEach(clearTimeout);
+                    events.forEach(function (event) { (event.span || event.line).style.opacity = '1'; });
+                    cursor.remove();
+                    root.classList.remove('term-live');
                 }).observe(root, { attributes: true, attributeFilter: ['data-motion'] });
             }
 
-            // If the timeline fails, the page shows everything: the hidden states apply only while term-failed is absent
+            // If the terminal fails, the page shows everything: the hidden states apply only while term-failed is absent
             try {
                 runTerminal();
             } catch (e) {
+                document.querySelectorAll('#terminal .term-char, #terminal .term-fade').forEach(function (el) { el.style.opacity = '1'; });
                 document.documentElement.classList.add('term-failed');
             }
-        </script>
-        <script>
-            // Reveal: the headings play together as soon as the page is ready. Each body of text, list and rule plays when it
-            // scrolls into view. A body takes as long as its heading, so a section has finished by the time the reader reaches it.
-            // Animated mode only. The styles are in style.css
-            (function () {
-                var root = document.documentElement;
-                if (root.getAttribute('data-motion') !== 'animated') {
-                    // No reveal in minimal mode. The marker keeps the hidden states off if the mode is switched to animated later
-                    root.classList.add('reveal-skipped');
-                    return;
-                }
-
-                // Observer settings in one constant, for the body text, the lists and the rules
-                var REVEAL_OBSERVER_OPTIONS = { threshold: 0.2, rootMargin: '0px 0px -10% 0px' };
-
-                // A heading and a body both take TOTAL_MS. Each item fades for FADE_MS, and the starts of the items in a
-                // group are spread evenly over the rest. The rules' length is set in style.css
-                var TOTAL_MS = 500;
-                var FADE_MS = 250;
-
-                // The delay between the starts of n items, so that the last one ends at TOTAL_MS
-                function spread(n) {
-                    return n > 1 ? (TOTAL_MS - FADE_MS) / (n - 1) : 0;
-                }
-
-                // Gives each item its start delay from its place in the group
-                function delayItems(items) {
-                    var step = spread(items.length);
-                    items.forEach(function (item, i) { item.style.transitionDelay = (i * step) + 'ms'; });
-                }
-
-                // A step is one thing that reveals. el is the element that is watched, and marked gets the class that starts it
-                function makeStep(order, el, marked) {
-                    return { order: order, el: el, marked: marked, played: false };
-                }
-
-                // Starts a step. Steps that start together start in the same frame
-                function play(step) {
-                    if (step.played) return;
-                    step.played = true;
-                    // Read the layout first, so each item's start state is set before its class changes
-                    root.getBoundingClientRect();
-                    step.marked.forEach(function (el) { el.classList.add('is-revealed'); });
-                }
-
-                // Replaces the heading's text with a hidden copy and a letter-by-letter copy.
-                // Builds everything before it touches the heading, so a throw leaves the text as it was.
-                function split(heading) {
-                    var text = heading.textContent;
-                    var fragment = document.createDocumentFragment();
-
-                    var copy = document.createElement('span');
-                    copy.className = 'sr-only';
-                    copy.textContent = text;
-                    fragment.appendChild(copy);
-
-                    var visible = document.createElement('span');
-                    visible.setAttribute('aria-hidden', 'true');
-
-                    var letters = [];
-                    text.split(' ').forEach(function (word, i) {
-                        if (i > 0) visible.appendChild(document.createTextNode(' '));
-                        var group = document.createElement('span');
-                        group.className = 'word';
-                        Array.from(word).forEach(function (ch) {
-                            var letter = document.createElement('span');
-                            letter.className = 'letter';
-                            letter.textContent = ch;
-                            group.appendChild(letter);
-                            letters.push(letter);
-                        });
-                        visible.appendChild(group);
-                    });
-
-                    // The letters' starts are spread so the whole heading takes TOTAL_MS
-                    delayItems(letters);
-
-                    fragment.appendChild(visible);
-                    heading.textContent = '';
-                    heading.appendChild(fragment);
-                }
-
-                // Returns true when the heading was split. If the split throws, the heading shows as plain text.
-                function prepare(heading) {
-                    try {
-                        split(heading);
-                        return true;
-                    } catch (e) {
-                        heading.classList.add('is-revealed');
-                        return false;
-                    }
-                }
-
-                // Wraps each word of a body block in its own span. The text and the spaces between words stay as they are.
-                // Returns the spans in page order
-                function splitWords(block) {
-                    var walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
-                    var nodes = [];
-                    while (walker.nextNode()) nodes.push(walker.currentNode);
-
-                    var words = [];
-                    nodes.forEach(function (node) {
-                        var fragment = document.createDocumentFragment();
-                        node.textContent.split(/(\s+)/).forEach(function (part) {
-                            if (part === '') return;
-                            if (/^\s+$/.test(part)) {
-                                fragment.appendChild(document.createTextNode(part));
-                                return;
-                            }
-                            var word = document.createElement('span');
-                            word.className = 'reveal-word';
-                            word.textContent = part;
-                            fragment.appendChild(word);
-                            words.push(word);
-                        });
-                        node.parentNode.replaceChild(fragment, node);
-                    });
-                    return words;
-                }
-
-                // Splits a body into sentences by their text: a word that ends in . ! or ? closes a sentence. Each sentence
-                // starts together, and the sentences are spread evenly over TOTAL_MS. The split does not depend on the width
-                function delaySentences(words) {
-                    var sentenceOf = [];
-                    var current = 0;
-                    words.forEach(function (word) {
-                        sentenceOf.push(current);
-                        if (/[.!?]$/.test(word.textContent)) current++;
-                    });
-                    var endsWithStop = words.length > 0 && /[.!?]$/.test(words[words.length - 1].textContent);
-                    var count = endsWithStop || !words.length ? current : current + 1;
-                    var step = spread(count);
-                    words.forEach(function (word, i) { word.style.transitionDelay = (sentenceOf[i] * step) + 'ms'; });
-                }
-
-                // Every step, in page order: the headings, the body text, the lists and the rules
-                function buildSteps() {
-                    var els = document.querySelectorAll('h1, h2, .section-text, #projects ul, .skills-list, .contact-list, hr');
-                    return Array.prototype.map.call(els, function (el, order) {
-                        if (el.tagName === 'H1' || el.tagName === 'H2' || el.tagName === 'HR') {
-                            return makeStep(order, el, [el]);
-                        }
-                        if (el.classList.contains('section-text')) {
-                            // Body text: its words fade in line by line. The block itself shows at once, and its words wait hidden
-                            var words = splitWords(el);
-                            delaySentences(words);
-                            el.classList.add('is-revealed');
-                            return makeStep(order, el, words);
-                        }
-                        // A list: its items fade in one after another
-                        var items = Array.prototype.slice.call(el.querySelectorAll('li'));
-                        delayItems(items);
-                        return makeStep(order, el, items);
-                    });
-                }
-
-                // Letter positions are measured in the page font, so the split waits for it
-                var fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
-
-                fontsReady.then(function () {
-                    // Split the headings first. A heading whose split throws shows as plain text
-                    var h1 = document.querySelector('h1');
-                    if (h1) prepare(h1);
-                    document.querySelectorAll('h2').forEach(function (h2) { prepare(h2); });
-
-                    var steps = buildSteps();
-                    function stepFor(el) {
-                        return steps.find(function (step) { return step.el === el; });
-                    }
-
-                    // The headings play together, now, whether or not they are on screen
-                    steps.forEach(function (step) {
-                        if (step.el.tagName === 'H1' || step.el.tagName === 'H2') play(step);
-                    });
-
-                    // Body text, lists and rules play when they scroll into view. One observer serves them all, and each plays once
-                    var observer = new IntersectionObserver(function (entries) {
-                        entries.forEach(function (entry) {
-                            if (!entry.isIntersecting) return;
-                            observer.unobserve(entry.target);
-                            play(stepFor(entry.target));
-                        });
-                    }, REVEAL_OBSERVER_OPTIONS);
-                    steps.forEach(function (step) {
-                        if (step.el.tagName !== 'H1' && step.el.tagName !== 'H2') observer.observe(step.el);
-                    });
-
-                    // Leaving animated mode shows everything at once and stops watching. Switching back then hides nothing
-                    new MutationObserver(function () {
-                        if (root.getAttribute('data-motion') === 'animated') return;
-                        observer.disconnect();
-                        steps.forEach(function (step) {
-                            step.played = true;
-                            step.marked.forEach(function (el) { el.classList.add('is-revealed'); });
-                        });
-                    }).observe(root, { attributes: true, attributeFilter: ['data-motion'] });
-                }).catch(function () {
-                    // If the script fails, nothing stays hidden
-                    document.querySelectorAll('h1, h2, .section-text, .reveal-word, .contact-list li, #projects li, .skills-list li, hr').forEach(function (el) {
-                        el.classList.add('is-revealed');
-                    });
-                });
-            })();
         </script>
     </body>
     </html>

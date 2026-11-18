@@ -225,6 +225,24 @@ input[type=checkbox]:checked + .display label .circle .moon {
     width: 100%;
 }
 
+/* On desktop the names sit in the middle column, so their centre is the navbar's centre. The toggle stays at the right */
+@media (min-width: 601px) {
+    .nav-container {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+    }
+
+    .nav-links {
+        grid-column: 2;
+        justify-self: center;
+    }
+
+    .display {
+        grid-column: 3;
+        justify-self: end;
+    }
+}
+
 .nav-container a {
     color: var(--link);
     text-decoration: none;
@@ -244,87 +262,11 @@ input[type=checkbox]:checked + .display label .circle .moon {
     }
 }
 
-/* Main content */
+/* Main holds the landing terminal. It has no padding, so the terminal keeps a 16px gutter on phones */
 main {
     background: transparent;
     max-width: 800px;
     margin: 0 auto;
-    padding: 2rem 1rem;
-}
-
-/* Headers with accent colors */
-h1 {
-    font-size: 2rem;
-    color: var(--accent);
-    margin-bottom: 1rem;
-    font-weight: 500;
-    line-height: 1.2;
-}
-
-h2 {
-    color: var(--accent);
-    font-size: 1.5rem;
-    margin-top: 2.5rem;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-    line-height: 1.2;
-}
-
-/* Headings are code-style: a monospace label in a box, like inline code. The box uses the surface colour */
-h1, h2 {
-    display: table;
-    background: var(--surface);
-    padding: 0.1em 0.5em;
-    border-radius: 6px;
-}
-
-/* Bold text: lighter than the browser's default bold, to match the headings */
-strong {
-    font-weight: 500;
-}
-
-/* Horizontal rules: a 1px background, so the animated rule can scale it */
-hr {
-    border: none;
-    height: 1px;
-    background: var(--rule);
-    margin: 2rem 0;
-}
-
-/* Lists */
-ul {
-    list-style-type: disc;
-    padding-left: 1.5rem;
-}
-
-ul li {
-    margin-bottom: 0.5rem;
-}
-
-.skills-list {
-    list-style: none;
-    padding-left: 0;
-}
-
-.contact-list {
-    list-style: none;
-    padding-left: 0;
-}
-
-.contact-list li {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.6rem;
-}
-
-.contact-list svg {
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-    color: var(--text-muted);
-    position: static;
-    transition: none;
 }
 
 /* Links */
@@ -345,15 +287,6 @@ a:visited {
     color: var(--link);
 }
 
-/* Smooth scrolling */
-html {
-    scroll-behavior: smooth;
-}
-
-section {
-    scroll-margin-top: 80px;
-}
-
 /* Footer: holds only the Animations switch, on the same column as the page content, aligned right */
 footer {
     max-width: 800px;
@@ -361,101 +294,6 @@ footer {
     padding: 0 1rem;
     display: flex;
     justify-content: flex-end;
-}
-
-/* Reveal queue (see the reveal script in index.html): in animated mode the headings, section text, lists and rules wait hidden
-   until their step plays. The reveal-skipped marker is set when the page loads in minimal mode, so nothing stays hidden
-   if the mode is switched to animated later */
-
-/* Animated mode: a heading waits at opacity 0 until its step plays. Opacity keeps it in the accessibility tree */
-html[data-motion="animated"]:not(.reveal-skipped) h1,
-html[data-motion="animated"]:not(.reveal-skipped) h2 {
-    opacity: 0;
-}
-
-/* One group per word, so a word never breaks across lines */
-.word {
-    display: inline-block;
-    white-space: nowrap;
-}
-
-/* One span per letter, so the transform applies to it */
-.letter {
-    display: inline-block;
-}
-
-/* Animated mode: each letter starts faded out and 6px low, then rises into place. Each letter fades for 250 ms;
-   the reveal script spreads the letters' starts so the whole heading takes 500 ms */
-html[data-motion="animated"] .letter {
-    opacity: 0;
-    transform: translateY(6px);
-    transition: opacity 0.25s ease-out, transform 0.25s ease-out;
-}
-
-html[data-motion="animated"] .is-revealed .letter {
-    opacity: 1;
-    transform: none;
-}
-
-/* Outside animated mode, letters never transition. Their inline delays would otherwise
-   still run zero-length transitions, which replay the stagger when the mode is switched */
-html:not([data-motion="animated"]) .letter {
-    transition: none;
-}
-
-/* Animated mode: body text (until its block is split), the words of body text, the Contact list items and the list items
-   wait at opacity 0 until their step plays */
-html[data-motion="animated"]:not(.reveal-skipped) .section-text,
-html[data-motion="animated"]:not(.reveal-skipped) .reveal-word,
-html[data-motion="animated"]:not(.reveal-skipped) .contact-list li,
-html[data-motion="animated"]:not(.reveal-skipped) #projects li,
-html[data-motion="animated"]:not(.reveal-skipped) .skills-list li {
-    opacity: 0;
-}
-
-/* Body items fade for 250 ms, the same as a heading's letters. The reveal script spreads their starts so that
-   each body takes 500 ms, the same as its heading */
-html[data-motion="animated"] .reveal-word,
-html[data-motion="animated"] .contact-list li,
-html[data-motion="animated"] #projects li,
-html[data-motion="animated"] .skills-list li {
-    transition: opacity 0.25s ease-out;
-}
-
-/* Animated mode: each rule waits scaled to 0, then draws from the left to full width, once */
-html[data-motion="animated"]:not(.reveal-skipped) hr {
-    transform: scaleX(0);
-    transform-origin: left center;
-}
-
-html[data-motion="animated"] hr {
-    transition: transform 0.5s ease-out;
-}
-
-/* A step that has played shows its item */
-html[data-motion="animated"] h1.is-revealed,
-html[data-motion="animated"] h2.is-revealed,
-html[data-motion="animated"] .section-text.is-revealed,
-html[data-motion="animated"] .reveal-word.is-revealed,
-html[data-motion="animated"] .contact-list li.is-revealed,
-html[data-motion="animated"] #projects li.is-revealed,
-html[data-motion="animated"] .skills-list li.is-revealed {
-    opacity: 1;
-}
-
-/* none is scale 1. Using it, not scaleX(1), means a switch back from minimal mode starts no transition on a rule */
-html[data-motion="animated"] hr.is-revealed {
-    transform: none;
-}
-
-/* Outside animated mode, the reveal items never transition, for the same reason as letters */
-html:not([data-motion="animated"]) .section-text,
-html:not([data-motion="animated"]) .reveal-word,
-html:not([data-motion="animated"]) .contact-list li,
-html:not([data-motion="animated"]) #projects li,
-html:not([data-motion="animated"]) .skills-list li,
-html:not([data-motion="animated"]) hr {
-    transition: none;
 }
 
 /* Hidden copy of each heading for screen readers: clipped out of view, not display: none */
@@ -560,6 +398,7 @@ html:not([data-motion="animated"]) hr {
 
 /* The terminal: the code-style box of the headings, in the surface colour. 760px at most. Nothing in it transitions */
 .terminal {
+    position: relative;
     box-sizing: border-box;
     width: 100%;
     max-width: 760px;
@@ -577,6 +416,12 @@ html:not([data-motion="animated"]) hr {
     margin-top: 0.5rem;
 }
 
+/* A blank line, in the output or the panel, takes a line's height and holds no characters */
+.term-blank,
+.ls-blank {
+    min-height: 1.6em;
+}
+
 /* The prompt is in the accent colour. It is 24px, which counts as large text, so the accent passes 3:1 on the surface */
 .term-prompt {
     color: var(--accent);
@@ -590,27 +435,33 @@ html[data-motion="animated"]:not(.term-failed) .navbar {
     opacity: 0;
 }
 
-/* Animated mode, while the script's timeline runs (the term-live class). Each character, printed line and output line
-   starts hidden and shows at its delay, which the script sets. The terminal fades in first and the navbar drops in last.
-   Opacity and transform only. Without the class, or in minimal mode, nothing here is hidden or animated */
+/* Animated mode, while the script's timeline runs (the term-live class). The terminal fades in over 1500 ms, ease-out.
+   The navbar drops in over 500 ms, ease-out, after the output. The script sets the navbar's delay. Opacity and transform only */
 html.term-live[data-motion="animated"] .terminal {
-    animation: term-show 0.5s linear both;
-}
-
-html.term-live[data-motion="animated"] .term-char,
-html.term-live[data-motion="animated"] .term-print {
-    animation: term-show 0.001s linear var(--delay, 0ms) both;
-}
-
-html.term-live[data-motion="animated"] .term-out {
-    animation: term-show 0.25s ease-out var(--delay, 0ms) both;
+    animation: term-fade 1.5s ease-out both;
 }
 
 html.term-live[data-motion="animated"] .navbar {
     animation: nav-drop 0.5s ease-out var(--drop-delay, 0ms) both;
 }
 
-@keyframes term-show {
+/* A printed line fades in over 250 ms, at the output pace. Only the opacity changes. The script sets each line's opacity */
+html.term-live[data-motion="animated"] .term-fade {
+    transition: opacity 0.25s ease-out;
+}
+
+/* The blinking cursor: a block the height of the text, in the body text colour. It blinks on a steady 1-second cycle, on for
+   500 ms and off for 500 ms. The script moves it with transform. Only the opacity animates, and step-end switches it sharply */
+.term-cursor {
+    position: absolute;
+    left: 0;
+    top: 0;
+    background: var(--text);
+    pointer-events: none;
+    animation: term-blink 1s step-end infinite;
+}
+
+@keyframes term-fade {
     from {
         opacity: 0;
     }
@@ -629,6 +480,16 @@ html.term-live[data-motion="animated"] .navbar {
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+@keyframes term-blink {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0;
     }
 }
 
@@ -696,18 +557,6 @@ html.term-live[data-motion="animated"] .navbar {
 
     footer {
         padding: 0 0.5rem;
-    }
-
-    main {
-        padding: 1rem 0.5rem;
-    }
-
-    h1 {
-        font-size: 1.75rem;
-    }
-
-    h2 {
-        font-size: 1.4rem;
     }
 
     .nav-burger {

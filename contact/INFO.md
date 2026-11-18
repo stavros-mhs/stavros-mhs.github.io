@@ -1,0 +1,3 @@
+- [stavros.mhs@gmail.com](mailto:stavros.mhs@gmail.com)
+- [github.com/stavros-mhs](https://github.com/stavros-mhs/)
+- [view CV](../cv.pdf)
