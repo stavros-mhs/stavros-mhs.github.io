@@ -31,7 +31,7 @@
         <nav class="navbar">
             <div class="nav-container">
                 <div class="nav-links">
-                    <a href="#projects">projects/</a> <a href="#skills">skills/</a> <a href="#hobbies">hobbies/</a> <a href="#contact">contact/</a>
+                    <a href="#/user/">user/</a> <a href="#/projects/">projects/</a> <a href="#/skills/">skills/</a> <a href="#/contact/">contact/</a>
                 </div>
 
                 <button type="button" class="nav-burger" id="burger" aria-expanded="false" aria-controls="ls-panel" aria-label="Menu" hidden>
@@ -58,15 +58,33 @@
             </div>
 
             <div class="ls-panel" id="ls-panel" hidden>
-                <p class="ls-command"><span class="ls-command-text">ls -l</span></p>
-                <ul class="ls-list">
-                    <li><a href="#projects">drwxr-xr-x  2 guest guest 4096 Nov 17 projects/</a></li>
-                    <li><a href="#skills">drwxr-xr-x  2 guest guest 4096 Nov 17 skills/</a></li>
-                    <li><a href="#hobbies">drwxr-xr-x  2 guest guest 4096 Nov 17 hobbies/</a></li>
-                    <li><a href="#contact">drwxr-xr-x  2 guest guest 4096 Nov 17 contact/</a></li>
-                </ul>
+                <p class="ls-line">~/</p>
+                <p class="ls-line">├── <a href="#/user/">user/</a></p>
+                <p class="ls-line">├── <a href="#/projects/">projects/</a></p>
+                <p class="ls-line">├── <a href="#/skills/">skills/</a></p>
+                <p class="ls-line">└── <a href="#/contact/">contact/</a></p>
+                <p class="ls-line"> </p>
+                <p class="ls-line">4 directories</p>
             </div>
         </nav>
+
+        <div class="landing">
+            <div class="terminal" id="terminal" role="region" aria-label="Terminal">
+                <p class="term-line" id="term-cmd-1"><span class="term-prompt">~$</span> whoami</p>
+                <p class="term-line term-print" id="term-print-1">stavros-mhs</p>
+                <p class="term-line" id="term-cmd-2"><span class="term-prompt">~$</span> ls -l</p>
+                <div class="term-output" id="term-output">
+                    <p class="term-line term-out">~/</p>
+                    <p class="term-line term-out">├── <a href="#/user/">user/</a></p>
+                    <p class="term-line term-out">├── <a href="#/projects/">projects/</a></p>
+                    <p class="term-line term-out">├── <a href="#/skills/">skills/</a></p>
+                    <p class="term-line term-out">└── <a href="#/contact/">contact/</a></p>
+                    <p class="term-line term-out"> </p>
+                    <p class="term-line term-out">4 directories</p>
+                </div>
+            </div>
+        </div>
+
         <main>
             <section>
                 <h1>whoami</h1>
@@ -193,43 +211,13 @@
             })();
         </script>
         <script>
-            // Phone navigation. Below 600px the four names give way to a burger, which opens an ls -l listing. Without JavaScript
+            // Phone navigation. Below 600px the four names give way to a burger, which opens the tree listing. Without JavaScript
             // the names stay in the navbar as links, and the burger and the listing stay hidden. The styles are in style.css
             (function () {
                 var root = document.documentElement;
                 var burger = document.getElementById('burger');
                 var panel = document.getElementById('ls-panel');
                 var phone = window.matchMedia('(max-width: 600px)');
-
-                // Time between the starts of the typed letters, and between the starts of the listing lines (ms)
-                var TYPE_MS = 60;
-                var LINE_MS = 80;
-
-                // The command is split into letters, which fade in one after another. The whole command stays in a visually
-                // hidden copy, so screen readers read it in full. The letters are hidden from them
-                var command = panel.querySelector('.ls-command-text');
-                var text = command.textContent;
-                var typed = document.createElement('span');
-                typed.setAttribute('aria-hidden', 'true');
-                Array.prototype.forEach.call(text, function (ch, i) {
-                    var letter = document.createElement('span');
-                    letter.className = 'ls-char';
-                    letter.style.setProperty('--delay', (i * TYPE_MS) + 'ms');
-                    letter.textContent = ch;
-                    typed.appendChild(letter);
-                });
-                var copy = document.createElement('span');
-                copy.className = 'sr-only';
-                copy.textContent = text;
-                command.textContent = '';
-                command.appendChild(copy);
-                command.appendChild(typed);
-
-                // The listing lines start once the command has typed, each one LINE_MS after the line above
-                var typedMs = text.length * TYPE_MS;
-                Array.prototype.forEach.call(panel.querySelectorAll('.ls-list li'), function (li, i) {
-                    li.style.setProperty('--delay', (typedMs + i * LINE_MS) + 'ms');
-                });
 
                 function setOpen(open) {
                     panel.hidden = !open;
@@ -268,6 +256,92 @@
                 burger.removeAttribute('hidden');
                 root.classList.add('menu-ready');
             })();
+        </script>
+        <script>
+            // Landing terminal: types whoami and ls -l, prints the tree, then the navbar drops in. Animated mode only. The times are
+            // in ms from the start of the animations, and the constants below set them. Minimal mode and the no-JavaScript case
+            // show the final text. The styles are in style.css
+            function runTerminal() {
+                var root = document.documentElement;
+                if (root.getAttribute('data-motion') !== 'animated') return;
+
+                // Times in ms. The terminal fades in for 500 ms, in the CSS, and the first command starts when it has faded in
+                var FADE_MS = 500;
+                var TYPE_MS = 60;        // one character
+                var PAUSE_MS = 300;      // after a command has typed, before its output
+                var GAP_MS = 400;        // after the output has printed, before the next command
+                var LINE_MS = 120;       // between output lines
+                var LINE_FADE_MS = 250;  // each output line fades in (the CSS sets the length)
+
+                var cmd1 = document.getElementById('term-cmd-1');
+                var print1 = document.getElementById('term-print-1');
+                var cmd2 = document.getElementById('term-cmd-2');
+                var outLines = Array.prototype.slice.call(document.querySelectorAll('#term-output .term-out'));
+                var navbar = document.querySelector('.navbar');
+
+                function setDelay(el, ms) {
+                    el.style.setProperty('--delay', ms + 'ms');
+                }
+
+                // Splits a command line into characters, each shown at its time. The whole line stays in a visually hidden copy,
+                // so screen readers read it in full and the characters are hidden from them. Returns the time the last character types
+                function typeLine(line, start) {
+                    var full = line.textContent;
+                    var copy = document.createElement('span');
+                    copy.className = 'sr-only';
+                    copy.textContent = full;
+
+                    var typed = document.createElement('span');
+                    typed.setAttribute('aria-hidden', 'true');
+                    var n = 0;
+                    Array.prototype.forEach.call(line.childNodes, function (node) {
+                        // The prompt keeps its class, so it keeps its colour
+                        var cls = node.nodeType === 1 ? node.className : '';
+                        Array.prototype.forEach.call(node.textContent, function (ch) {
+                            var c = document.createElement('span');
+                            c.className = ('term-char ' + cls).trim();
+                            c.textContent = ch;
+                            setDelay(c, start + n * TYPE_MS);
+                            typed.appendChild(c);
+                            n++;
+                        });
+                    });
+
+                    line.textContent = '';
+                    line.appendChild(copy);
+                    line.appendChild(typed);
+                    return start + n * TYPE_MS;
+                }
+
+                // The timeline: each step starts when the one before it has finished
+                var cmd1End = typeLine(cmd1, FADE_MS);
+                var printAt = cmd1End + PAUSE_MS;
+                setDelay(print1, printAt);
+                var cmd2End = typeLine(cmd2, printAt + GAP_MS);
+                var outStart = cmd2End + PAUSE_MS;
+                var outShown = outStart;
+                outLines.forEach(function (line, i) {
+                    var at = outStart + i * LINE_MS;
+                    setDelay(line, at);
+                    outShown = Math.max(outShown, at + LINE_FADE_MS);
+                });
+
+                // The navbar drops in once the output has printed. Its length is set in the CSS (500 ms)
+                navbar.style.setProperty('--drop-delay', outShown + 'ms');
+                root.classList.add('term-live');
+
+                // Leaving animated mode shows everything at once. Switching back later does not replay the timeline
+                new MutationObserver(function () {
+                    if (root.getAttribute('data-motion') !== 'animated') root.classList.remove('term-live');
+                }).observe(root, { attributes: true, attributeFilter: ['data-motion'] });
+            }
+
+            // If the timeline fails, the page shows everything: the hidden states apply only while term-failed is absent
+            try {
+                runTerminal();
+            } catch (e) {
+                document.documentElement.classList.add('term-failed');
+            }
         </script>
         <script>
             // Reveal: the headings play together as soon as the page is ready. Each body of text, list and rule plays when it

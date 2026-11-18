@@ -516,7 +516,7 @@ html:not([data-motion="animated"]) hr {
     }
 }
 
-/* The ls -l panel: under the navbar on phones. It stays hidden without JavaScript, and on desktop */
+/* The tree panel: under the navbar on phones. It stays hidden without JavaScript, and on desktop */
 .ls-panel {
     position: absolute;
     top: 100%;
@@ -525,7 +525,7 @@ html:not([data-motion="animated"]) hr {
     padding: 0.75rem 1rem;
     background: var(--bg);
     border-bottom: 1px solid var(--rule);
-    font-size: 0.75rem;
+    font-size: 0.9rem;
     text-align: left;
 }
 
@@ -535,42 +535,82 @@ html:not([data-motion="animated"]) hr {
     }
 }
 
-.ls-command {
-    margin: 0 0 0.5rem;
-    color: var(--text);
-    white-space: pre;
-}
-
-/* A listing line keeps its spacing. The list runs to the panel's right edge, to give a line the most room. It scrolls
-   sideways inside the panel only on a phone narrower than a full listing line */
-.ls-list {
-    margin: 0 -1rem 0 0;
-    padding: 0;
-    list-style: none;
-    overflow-x: auto;
-}
-
-.ls-list li {
+/* One line of the tree, in the panel or the terminal. The spaces are kept, so the tree keeps its columns */
+.ls-line,
+.term-line {
     margin: 0;
-}
-
-.ls-list a {
-    display: block;
     white-space: pre;
-    color: var(--link);
 }
 
-/* Animated mode: each typed letter fades in at its delay, then each listing line fades in at its delay. Both start with
-   opacity 0 and stay at 1 once they have played. The script sets the delays, and the animations run each time the panel opens */
-html[data-motion="animated"] .ls-char {
-    animation: ls-fade 0.06s linear var(--delay, 0ms) both;
+/* Focus ring for the navbar links and the terminal links, shown for keyboard focus, as on the other controls */
+.navbar a:focus-visible,
+.terminal a:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 3px;
 }
 
-html[data-motion="animated"] .ls-list li {
-    animation: ls-fade 0.25s ease-out var(--delay, 0ms) both;
+/* The landing: the terminal sits in the centre of the first screen. The block fills the space between the navbar and the old
+   sections. Its height is the viewport less the space above it (the navbar and its margins). The mobile block changes the height */
+.landing {
+    min-height: calc(100vh - 208px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-@keyframes ls-fade {
+/* The terminal: the code-style box of the headings, in the surface colour. 760px at most. Nothing in it transitions */
+.terminal {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 760px;
+    padding: 1.25rem 1.5rem;
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+}
+
+.terminal * {
+    transition: none;
+}
+
+.term-output {
+    margin-top: 0.5rem;
+}
+
+/* The prompt is in the accent colour. It is 24px, which counts as large text, so the accent passes 3:1 on the surface */
+.term-prompt {
+    color: var(--accent);
+    font-size: 1.5rem;
+}
+
+/* Animated mode: the terminal and the navbar start hidden, so no static text shows before the script has set the timeline.
+   If the script fails, it marks the page term-failed, and then everything shows */
+html[data-motion="animated"]:not(.term-failed) .terminal,
+html[data-motion="animated"]:not(.term-failed) .navbar {
+    opacity: 0;
+}
+
+/* Animated mode, while the script's timeline runs (the term-live class). Each character, printed line and output line
+   starts hidden and shows at its delay, which the script sets. The terminal fades in first and the navbar drops in last.
+   Opacity and transform only. Without the class, or in minimal mode, nothing here is hidden or animated */
+html.term-live[data-motion="animated"] .terminal {
+    animation: term-show 0.5s linear both;
+}
+
+html.term-live[data-motion="animated"] .term-char,
+html.term-live[data-motion="animated"] .term-print {
+    animation: term-show 0.001s linear var(--delay, 0ms) both;
+}
+
+html.term-live[data-motion="animated"] .term-out {
+    animation: term-show 0.25s ease-out var(--delay, 0ms) both;
+}
+
+html.term-live[data-motion="animated"] .navbar {
+    animation: nav-drop 0.5s ease-out var(--drop-delay, 0ms) both;
+}
+
+@keyframes term-show {
     from {
         opacity: 0;
     }
@@ -580,10 +620,16 @@ html[data-motion="animated"] .ls-list li {
     }
 }
 
-/* Minimal mode: everything shows at once, with no animation */
-html:not([data-motion="animated"]) .ls-char,
-html:not([data-motion="animated"]) .ls-list li {
-    animation: none;
+@keyframes nav-drop {
+    from {
+        opacity: 0;
+        transform: translateY(-100%);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Mobile responsive */
@@ -674,5 +720,13 @@ html:not([data-motion="animated"]) .ls-list li {
 
     .menu-ready .nav-container {
         justify-content: space-between;
+    }
+
+    .landing {
+        min-height: calc(100vh - 168px);
+    }
+
+    .terminal {
+        padding: 1rem;
     }
 }
