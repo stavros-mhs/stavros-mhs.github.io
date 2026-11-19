@@ -192,8 +192,8 @@
                 var root = document.documentElement;
                 if (root.getAttribute('data-motion') !== 'animated') return;
 
-                // Times in ms. The fade (1500 ms, ease-out) and the navbar's drop (500 ms, ease-out) are in the CSS
-                var FADE_MS = 1500;       // the terminal fades in
+                // Times in ms. The fade (750 ms, cubic-bezier(0.08, 0.52, 0.52, 1)) and the navbar's drop (500 ms, ease-out) are in the CSS
+                var FADE_MS = 750;        // the terminal fades in
                 var AFTER_FADE_MS = 400;  // after the fade, before the first command
                 var PAUSE_MS = 300;       // after a command, before the output it produces
                 var GAP_MS = 400;         // after a printed line has faded in, before the next command
