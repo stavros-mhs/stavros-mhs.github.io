@@ -225,8 +225,9 @@ input[type=checkbox]:checked + .display label .circle .moon {
     width: 100%;
 }
 
-/* On desktop the names fill the navbar to the left of the toggle. The first name sits at the left content edge, the last
-   ends one rem (the column gap) before the toggle, and the gaps between the names are equal. The toggle stays at the right */
+/* On desktop the four names form a group to the left of the toggle. At 601px to 900px they keep a small gap, which is what
+   fits 24px names in the room left of the toggle. From 901px they get padding from the left edge and a wider gap. The toggle
+   stays at the right */
 @media (min-width: 601px) {
     .nav-container {
         display: grid;
@@ -237,7 +238,8 @@ input[type=checkbox]:checked + .display label .circle .moon {
     .nav-links {
         grid-column: 1;
         display: flex;
-        justify-content: space-between;
+        justify-content: flex-start;
+        gap: 0.7rem;
     }
 
     .display {
@@ -246,10 +248,21 @@ input[type=checkbox]:checked + .display label .circle .moon {
     }
 }
 
+@media (min-width: 901px) {
+    .nav-container {
+        box-sizing: border-box;
+        padding-left: 2rem;
+    }
+
+    .nav-links {
+        gap: 2rem;
+    }
+}
+
 .nav-container a {
     color: var(--link);
     text-decoration: none;
-    font-size: 1.33rem;
+    font-size: 1.5rem;
     font-weight: 500;
     transition: color 0.3s;
 }
