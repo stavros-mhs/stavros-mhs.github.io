@@ -90,6 +90,7 @@
                     </div>
                     <div id="file-view" hidden></div>
                 </div>
+                <div id="page-content" class="page-content" hidden></div>
             </div>
             <noscript>
                 <div class="terminal term-noscript" role="region" aria-label="Terminal, without JavaScript">
@@ -209,26 +210,27 @@
         </script>
 
         <script>
-            // The landing terminal and the tree. The tree is the terminal's first output. A click on a directory opens or closes it
-            // in place, and its rows appear under it. A click on a file replaces the tree with the file's subpage, and the subpage's
-            // cd .. line returns to the tree. The title and the prompt show the current path, and the address after # is the same path.
-            // Animated mode types whoami and tree at human speed, and fades in what appears. Minimal mode shows each change at once.
-            // Without JavaScript the landing stays as it is, and the noscript tree shows. The times are in ms, and the constants below
-            // set them. The styles are in style.css
+            // The landing, the pages it opens, and the tree. The landing types whoami and tree, and its tree is the first page. A
+            // navbar name opens its folder's tree on a page of its own, which types tree and prints the folder. A click on a folder in
+            // a tree opens or closes it in place, and the counts follow each row as it appears or closes. A click on a file opens its
+            // page: the terminal types cat, and the file's markdown is printed below the terminal. The tab title and the prompt show the
+            // current path, and the address after # is the same path. Animated mode types and fades in what appears. Minimal mode shows
+            // each change at once. Without JavaScript the landing stays as it is, and the noscript tree shows. The times are in ms, and
+            // the constants below set them. The styles are in style.css
             function startTerminal() {
                 var root = document.documentElement;
                 var terminal = document.getElementById('terminal');
                 var treeView = document.getElementById('tree-view');
                 var fileView = document.getElementById('file-view');
-                var output = document.getElementById('term-output');
-                var promptEnd = document.getElementById('term-prompt-end');
+                var pageContent = document.getElementById('page-content');
+                var landing = document.querySelector('.landing');
                 var navbar = document.querySelector('.navbar');
 
                 // Times in ms. The fade (750 ms, cubic-bezier(0.08, 0.52, 0.52, 1)) and the navbar's drop (500 ms, ease-out) are in the CSS
                 var FADE_MS = 750;         // the landing's terminal fades in
-                var AFTER_FADE_MS = 400;   // after the fade, before the first command
+                var AFTER_FADE_MS = 400;   // after the fade, before whoami types
                 var PAUSE_MS = 300;        // after a command is typed, before its output appears
-                var PROMPT_PAUSE_MS = 300; // after the second prompt appears, before `tree` starts to type
+                var PROMPT_PAUSE_MS = 300; // after the second prompt appears, before `tree` types
                 var LINE_MS = 120;         // the output pace: each line or block starts this long after the one above
                 var LINE_FADE_MS = 250;    // each line or block fades in over this long
                 var NAV_GAP_MS = 400;      // after the tree has faded in, before the navbar drops
@@ -268,6 +270,7 @@
                 function nameOf(key) { return key.slice(key.lastIndexOf('/') + 1); }
                 function hashFor(key) { return key === '' ? '#/' : isFile(key) ? '#/' + key : '#/' + key + '/'; }
                 function promptText(folder) { return folder === '' ? '~$' : '~/' + folder + '$'; }
+                function pathText(folder, file) { return file ? '/' + file : (folder ? '/' + folder : '/'); }
                 // The route in an address after #. The key is null for a path that is not a route, and raw is the path as typed
                 function parseHash(hash) {
                     var raw = hash.replace(/^#\/?/, '');
@@ -275,8 +278,14 @@
                     var key = raw.replace(/\/$/, '');
                     return { key: (isFolder(key) || isFile(key)) ? key : null, raw: raw };
                 }
-                // The route that a hash change or a click is compared with. A path that is not a route gets its own id
+                // The id that a hash change or a click is compared with. A path that is not a route gets its own id
                 function routeId(key, raw) { return key !== null ? key : '?' + raw; }
+                function setHash(key) { if (location.hash !== hashFor(key)) location.hash = hashFor(key); }
+                function countText(dirs, files) {
+                    var s = dirs + (dirs === 1 ? ' directory' : ' directories');
+                    if (files) s += ', ' + files + (files === 1 ? ' file' : ' files');
+                    return s;
+                }
 
                 // Nodes are built with the DOM and textContent, never from HTML strings
                 function el(tag, cls, text) {
@@ -286,7 +295,7 @@
                     return node;
                 }
                 function lineEl(text, cls) { return el('p', cls ? 'term-line ' + cls : 'term-line', text); }
-                // A link to a route. A click on it runs the route; a folder's link (data-toggle) also opens or closes it
+                // A link to a route. A click on it runs the route
                 function routeLink(key, label) {
                     var a = el('a', null, label);
                     a.setAttribute('href', hashFor(key));
@@ -298,37 +307,192 @@
                     p.appendChild(routeLink(folder, 'cd ..'));
                     return p;
                 }
-                function promptLine(folder) {
-                    var p = lineEl('', 'term-cmd');
+                // A prompt with the path of its folder. The command that is typed after it goes after the space
+                function promptLine(folder, cls) {
+                    var p = lineEl('', cls);
                     p.appendChild(el('span', 'term-prompt', promptText(folder)));
                     p.appendChild(document.createTextNode(' '));
                     return p;
                 }
+                // A line that will fade in: it starts hidden, and its reveal sets it visible
+                function hidden(node, animated) {
+                    if (animated) {
+                        node.classList.add('term-fade');
+                        node.style.opacity = '0';
+                    }
+                    return node;
+                }
+                function isAnimated() { return root.getAttribute('data-motion') === 'animated'; }
+                function keepInView(node) { node.scrollIntoView({ block: 'nearest' }); }
 
-                // The tree. Folders that are open have their rows under them, and the rows keep their branch glyphs. A row's node is
-                // kept while the row shows, so a row that closes and opens again is the same element
-                var expanded = {};                         // a folder's route -> true while it is open
-                var rowNodes = {};                         // a row's target -> its element
-                var headerNode = lineEl('~/');
-                var blankNode = lineEl('', 'term-blank');
-                var countNode = lineEl('');
+                // The cursor: a block the height of the text, in the body text colour. The script moves it with transform
+                var cursor = null;
+                function ensureCursor() {
+                    if (!cursor) {
+                        cursor = el('span', 'term-cursor');
+                        cursor.setAttribute('aria-hidden', 'true');
+                    }
+                    if (!cursor.parentNode) terminal.appendChild(cursor);
+                }
+                function removeCursor() {
+                    if (cursor && cursor.parentNode) cursor.parentNode.removeChild(cursor);
+                }
+                function placeCursor(x, y, w, h) {
+                    ensureCursor();
+                    var box = terminal.getBoundingClientRect();
+                    cursor.style.width = w + 'px';
+                    cursor.style.height = h + 'px';
+                    cursor.style.transform = 'translate(' + (x - box.left) + 'px, ' + (y - box.top) + 'px)';
+                }
+                // After a character: at its right edge
+                function cursorAfterChar(span) {
+                    var r = span.getBoundingClientRect();
+                    placeCursor(r.right, r.top, r.width, r.height);
+                }
+                // At the end of a line: after its last text, or at the start of a blank line
+                function cursorAtLineEnd(line) {
+                    var size = parseFloat(getComputedStyle(line).fontSize);
+                    var range = document.createRange();
+                    range.selectNodeContents(line);
+                    var rects = Array.prototype.filter.call(range.getClientRects(), function (r) { return r.width > 0; });
+                    var last = rects[rects.length - 1];
+                    if (last) {
+                        placeCursor(last.right, last.top, size * 0.625, last.height);
+                    } else {
+                        var box = line.getBoundingClientRect();
+                        placeCursor(box.left, box.top, size * 0.625, box.height);
+                    }
+                }
 
-                // The rows that show, in order, with the branch glyphs they print with
-                function visibleRows() {
+                // Scheduled actions. Each action is { at, fn }, and fn(instant) changes the page: in animated mode it runs at its time
+                // with instant false, and in minimal mode it runs at once with instant true. A batch's onDone runs when its last action
+                // has run. flushAll runs whatever is still pending at once, which is how a click or a mode change ends an animation
+                var pending = [];
+                function runActions(actions, onDone) {
+                    if (!isAnimated()) {
+                        actions.forEach(function (a) { a.fn(true); });
+                        if (onDone) onDone();
+                        return;
+                    }
+                    if (!actions.length) {
+                        if (onDone) onDone();
+                        return;
+                    }
+                    root.classList.add('term-live');
+                    var batch = { left: actions.length, onDone: onDone };
+                    actions.forEach(function (a) {
+                        var entry = { fn: a.fn, batch: batch, done: false, timer: null };
+                        entry.timer = setTimeout(function () {
+                            if (entry.done) return;
+                            entry.done = true;
+                            pending = pending.filter(function (e) { return e !== entry; });
+                            entry.fn(false);
+                            finishEntry(entry);
+                        }, a.at);
+                        pending.push(entry);
+                    });
+                }
+                function finishEntry(entry) {
+                    var b = entry.batch;
+                    b.left--;
+                    if (b.left === 0 && b.onDone) b.onDone();
+                }
+                function flushAll() {
+                    var list = pending;
+                    pending = [];
+                    list.forEach(function (entry) {
+                        if (entry.done) return;
+                        entry.done = true;
+                        clearTimeout(entry.timer);
+                        entry.fn(true);
+                        finishEntry(entry);
+                    });
+                }
+
+                // Typing: one action per character, after a random interval. The first character is at `start`
+                function typeFn(line, ch) {
+                    return function (instant) {
+                        var span = el('span', 'term-char', ch);
+                        line.appendChild(span);
+                        if (!instant) {
+                            ensureCursor();
+                            cursorAfterChar(span);
+                            keepInView(line);
+                        }
+                    };
+                }
+                function typeActions(line, text, start) {
+                    var actions = [];
+                    var at = start;
+                    Array.from(text).forEach(function (ch, i) {
+                        if (i > 0) at += TYPE_MIN_MS + Math.random() * (TYPE_MAX_MS - TYPE_MIN_MS);
+                        actions.push({ at: at, fn: typeFn(line, ch) });
+                    });
+                    return { actions: actions, end: at };
+                }
+                // A line that is revealed: it shows, and the cursor moves to its end if cursor is set. A line that is not counted
+                // here (the header, the blank line and the count) only shows. A row that shows adds itself to the counts
+                function revealFn(node, cursor) {
+                    return function (instant) {
+                        if (instant) {
+                            node.classList.remove('term-fade');
+                            node.style.opacity = '1';
+                        } else {
+                            if (!node.isConnected) return;
+                            node.style.opacity = '1';
+                            keepInView(node);
+                            if (cursor) {
+                                ensureCursor();
+                                cursorAtLineEnd(node);
+                            }
+                        }
+                        if (node._key !== undefined && node.isConnected) {
+                            counted[node._key] = node._kind;
+                            updateCount();
+                        }
+                    };
+                }
+
+                // The rows of the tree. A row is kept while its folder shows, so its node keeps focus when another folder opens
+                var expanded = {};     // a folder's route -> true while it is open
+                // The page: its kind (home, dir, file or error), the folder that its prompt shows, and the file it shows
+                var pageKind = 'home';
+                var pageFolder = '';
+                var pageFile = null;
+                // The tree on the page: its output, its header, blank and count lines, its live prompt, its rows and its counts
+                var output = null;
+                var headerNode = null;
+                var blankNode = null;
+                var countNode = null;
+                var treePrompt = null;
+                var rowCache = {};
+                var counted = {};
+
+                function updateCount() {
+                    var dirs = 0;
+                    var files = 0;
+                    Object.keys(counted).forEach(function (key) {
+                        if (counted[key] === 'file') files++;
+                        else dirs++;
+                    });
+                    if (countNode) countNode.textContent = countText(dirs, files);
+                }
+                // The rows that show under the folder, in order, with the branch glyphs they print with
+                function visibleRows(folder) {
                     var items = [];
-                    (function walk(folder, indent) {
-                        var rows = ROWS[folder];
+                    (function walk(f, indent) {
+                        var rows = ROWS[f];
                         rows.forEach(function (row, i) {
                             var last = i === rows.length - 1;
                             var kind = kindOf(row[1]);
                             items.push({ key: row[1], name: row[0], prefix: indent + (last ? '└── ' : '├── '), kind: kind });
                             if (kind === 'dir' && expanded[row[1]]) walk(row[1], indent + (last ? '    ' : '│   '));
                         });
-                    })('', '');
+                    })(folder, '');
                     return items;
                 }
                 function rowNode(item) {
-                    if (!rowNodes[item.key]) {
+                    if (!rowCache[item.key]) {
                         var p = lineEl(item.prefix);
                         var a;
                         if (item.kind === 'repo') {
@@ -341,32 +505,27 @@
                             if (item.kind === 'dir') a.setAttribute('data-toggle', '');
                         }
                         p.appendChild(a);
-                        rowNodes[item.key] = p;
+                        p._key = item.key;
+                        p._kind = item.kind;
+                        rowCache[item.key] = p;
                     }
-                    return rowNodes[item.key];
+                    return rowCache[item.key];
                 }
-                // The count line counts what shows. Directories are counted as the tree counts them, and a source/ entry is a directory
-                function countText(dirs, files) {
-                    var s = dirs + (dirs === 1 ? ' directory' : ' directories');
-                    if (files) s += ', ' + files + (files === 1 ? ' file' : ' files');
-                    return s;
-                }
-                // Shows the tree as it stands. Rows that are new fade in one by one when animate is set, and the page keeps the newest
-                // of them in view. The cursor, if it is on the tree, moves with the prompt
-                function renderTree(animate) {
-                    var items = visibleRows();
-                    var nodes = [headerNode].concat(items.map(rowNode), [blankNode, countNode]);
-                    var dirs = 0;
-                    var files = 0;
-                    items.forEach(function (item) { if (item.kind === 'file') files++; else dirs++; });
-                    countNode.textContent = countText(dirs, files);
+                // Brings the output in line with the open folders. A row that closes is removed, and stops counting at once. A row
+                // that opens is placed hidden, and its reveal comes back as an action at its place in the output. In minimal mode the
+                // rows show at once. cursorFollows moves the cursor along the rows, as the landing does
+                function syncOutput(animated, startAt, cursorFollows) {
+                    var items = visibleRows(pageFolder);
+                    var wanted = [headerNode].concat(items.map(rowNode), [blankNode, countNode]);
                     Array.prototype.slice.call(output.children).forEach(function (child) {
-                        if (nodes.indexOf(child) === -1) output.removeChild(child);
+                        if (wanted.indexOf(child) === -1) {
+                            output.removeChild(child);
+                            if (child._key !== undefined) delete counted[child._key];
+                        }
                     });
-                    // Only the rows that are out of place move, so a focused link keeps its focus
                     var fresh = [];
                     var ref = output.firstChild;
-                    nodes.forEach(function (node) {
+                    wanted.forEach(function (node) {
                         if (node === ref) {
                             ref = ref.nextSibling;
                             return;
@@ -374,60 +533,182 @@
                         if (node.parentNode !== output) fresh.push(node);
                         output.insertBefore(node, ref);
                     });
-                    var rows = fresh.filter(function (node) { return node !== headerNode && node !== blankNode && node !== countNode; });
-                    if (animate && isAnimated()) {
-                        rows.forEach(function (node, i) {
-                            node.classList.add('term-fade');
-                            node.style.opacity = '0';
+                    var actions = [];
+                    fresh.forEach(function (node, i) {
+                        if (animated) {
+                            hidden(node, true);
                             void node.offsetHeight;
-                            setTimeout(function () { node.style.opacity = '1'; keepInView(node); }, i * LINE_MS);
-                        });
-                    } else {
-                        rows.forEach(function (node) { node.style.opacity = '1'; });
-                    }
-                    if (rows.length) keepInView(rows[rows.length - 1]);
-                    if (view === 'tree' && !timeline && isAnimated()) {
-                        ensureCursor();
-                        cursorAtLineEnd(promptEnd);
-                    }
-                }
-                // Opens every folder on the way to a route, so the route shows in the tree
-                function expandPath(key) {
-                    var acc = '';
-                    (key ? key.split('/') : []).forEach(function (part) {
-                        acc = acc ? acc + '/' + part : part;
-                        if (isFolder(acc)) expanded[acc] = true;
+                            actions.push({ at: startAt + i * LINE_MS, fn: revealFn(node, cursorFollows) });
+                        } else {
+                            node.style.opacity = '1';
+                            if (node._key !== undefined) counted[node._key] = node._kind;
+                        }
                     });
+                    updateCount();
+                    var lastAt = fresh.length ? startAt + (fresh.length - 1) * LINE_MS : startAt;
+                    return { actions: actions, lastAt: lastAt };
                 }
 
-                // Where the terminal is: the folder of the path, and the file shown, if any. The title and the prompt show it
-                var current = { folder: '', file: null };
+                // Sets the title to the path, and the tree's prompt to the folder
                 function setPath(folder, file) {
-                    current = { folder: folder, file: file || null };
-                    var path = file ? '/' + file : (folder ? '/' + folder : '/');
-                    document.title = path + ' — Stavros Michailidis';
-                    promptEnd.querySelector('.term-prompt').textContent = promptText(folder);
+                    document.title = pathText(folder, file);
+                    if (treePrompt) treePrompt.querySelector('.term-prompt').textContent = promptText(folder);
+                }
+                // Clears the page's parts. The actions of an earlier page are flushed first, by the caller
+                function clearPage() {
+                    treeView.textContent = '';
+                    fileView.textContent = '';
+                    pageContent.textContent = '';
+                    treeView.hidden = true;
+                    fileView.hidden = true;
+                    pageContent.hidden = true;
+                    output = null;
+                    headerNode = null;
+                    blankNode = null;
+                    countNode = null;
+                    treePrompt = null;
+                    rowCache = {};
+                    counted = {};
                 }
 
-                // The two views: the tree, or a file's subpage (or an error). The prompt that takes a typed command, and the place
-                // where the new nodes go, belong to the view on screen
-                var view = 'tree';
-                var live = promptEnd;
-                var sink = null;
-
-                var content = {};   // a file's route -> { ok, text }, once it has loaded
-                var loading = {};   // a file's route -> its load promise
-                function loadFile(key) {
-                    if (!loading[key]) {
-                        loading[key] = fetch(new URL(key, document.baseURI))
-                            .then(function (res) {
-                                if (!res.ok) throw new Error('HTTP ' + res.status);
-                                return res.text();
-                            })
-                            .then(function (text) { content[key] = { ok: true, text: text }; },
-                                  function () { content[key] = { ok: false }; });
+                // A tree page: the landing (folder is the root, with whoami first), or a folder's tree with its own command
+                function buildTreePage(folder, animated, landingLines, onDone) {
+                    clearPage();
+                    pageKind = folder === '' ? 'home' : 'dir';
+                    pageFolder = folder;
+                    pageFile = null;
+                    landing.classList.toggle('is-top', folder !== '');
+                    treeView.hidden = false;
+                    output = el('div', 'term-output');
+                    output.id = 'term-output';
+                    headerNode = lineEl(folder === '' ? '~/' : folder + '/');
+                    blankNode = lineEl('', 'term-blank');
+                    countNode = lineEl(countText(0, 0));
+                    treeView.appendChild(output);
+                    var actions = [];
+                    var clock;
+                    if (landingLines) {
+                        var cmd1 = promptLine('', 'term-cmd');
+                        var printed = hidden(lineEl('stavros-mhs'), animated);
+                        var cmd2 = hidden(promptLine('', 'term-cmd'), animated);
+                        treeView.insertBefore(cmd1, output);
+                        treeView.insertBefore(printed, output);
+                        treeView.insertBefore(cmd2, output);
+                        if (animated) {
+                            ensureCursor();
+                            cursorAtLineEnd(cmd1);
+                        }
+                        var typed1 = typeActions(cmd1, 'whoami', animated ? FADE_MS + AFTER_FADE_MS : 0);
+                        actions = actions.concat(typed1.actions);
+                        var outputAt = typed1.end + PAUSE_MS;
+                        actions.push({ at: outputAt, fn: revealFn(printed, false) });
+                        actions.push({ at: outputAt, fn: revealFn(cmd2, true) });
+                        var typed2 = typeActions(cmd2, 'tree', outputAt + PROMPT_PAUSE_MS);
+                        actions = actions.concat(typed2.actions);
+                        clock = typed2.end + PAUSE_MS;
+                    } else {
+                        var cmd = promptLine('', 'term-cmd');
+                        treeView.insertBefore(cmd, output);
+                        if (animated) {
+                            ensureCursor();
+                            cursorAtLineEnd(cmd);
+                        }
+                        var typed = typeActions(cmd, folder === '' ? 'tree' : 'tree ' + folder + '/', 0);
+                        actions = actions.concat(typed.actions);
+                        clock = typed.end + PAUSE_MS;
                     }
-                    return loading[key];
+                    var rows = syncOutput(animated, clock, landingLines);
+                    actions = actions.concat(rows.actions);
+                    var endAt = rows.lastAt;
+                    if (folder !== '') {
+                        var up = hidden(upLine(parentOf(folder)), animated);
+                        treeView.appendChild(up);
+                        endAt += LINE_MS;
+                        actions.push({ at: endAt, fn: revealFn(up, true) });
+                    }
+                    treePrompt = hidden(promptLine(folder), animated);
+                    treeView.appendChild(treePrompt);
+                    if (landingLines) {
+                        // The landing's final prompt fades in as the tree starts, and the cursor moves to it once the tree has faded in
+                        var treeIn = rows.lastAt + LINE_FADE_MS;
+                        actions.push({ at: clock, fn: revealFn(treePrompt, false) });
+                        actions.push({ at: treeIn, fn: revealFn(treePrompt, true) });
+                        if (animated) navbar.style.setProperty('--drop-delay', (treeIn + NAV_GAP_MS) + 'ms');
+                    } else {
+                        actions.push({ at: endAt + LINE_FADE_MS, fn: revealFn(treePrompt, true) });
+                    }
+                    setPath(folder);
+                    runActions(actions, onDone || null);
+                }
+
+                // A file's page: the terminal types cat at the folder's prompt, and the file's markdown is printed below it
+                function buildFilePage(key, animated) {
+                    clearPage();
+                    pageKind = 'file';
+                    pageFolder = folderOf(key);
+                    pageFile = key;
+                    landing.classList.add('is-top');
+                    fileView.hidden = false;
+                    var cmd = promptLine(pageFolder, 'term-cmd');
+                    var up = hidden(upLine(pageFolder), animated);
+                    var end = hidden(promptLine(pageFolder, 'term-cmd'), animated);
+                    fileView.appendChild(cmd);
+                    fileView.appendChild(up);
+                    fileView.appendChild(end);
+                    var c = content[key];
+                    var blocks = c && c.ok ? fileLines(key, c.text) : [lineEl('cat: ' + nameOf(key) + ': No such file or directory')];
+                    pageContent.hidden = false;
+                    blocks.forEach(function (b) {
+                        hidden(b, animated);
+                        pageContent.appendChild(b);
+                    });
+                    if (animated) {
+                        ensureCursor();
+                        cursorAtLineEnd(cmd);
+                    }
+                    var typed = typeActions(cmd, 'cat ' + nameOf(key), 0);
+                    var actions = typed.actions;
+                    var outStart = typed.end + PAUSE_MS;
+                    actions.push({ at: outStart, fn: revealFn(up, false) });
+                    blocks.forEach(function (b, i) {
+                        actions.push({ at: outStart + i * LINE_MS, fn: revealFn(b, false) });
+                    });
+                    var lastAt = outStart + (blocks.length - 1) * LINE_MS + LINE_FADE_MS;
+                    actions.push({ at: lastAt, fn: revealFn(end, true) });
+                    setPath(pageFolder, key);
+                    runActions(actions, null);
+                }
+
+                // An error: the command types at the current folder's prompt, then the message and a cd .. back to the folder
+                function buildErrorPage(raw, animated) {
+                    var folder = pageFolder;
+                    clearPage();
+                    pageKind = 'error';
+                    pageFolder = folder;
+                    pageFile = null;
+                    landing.classList.add('is-top');
+                    fileView.hidden = false;
+                    var cmd = promptLine(folder, 'term-cmd');
+                    var msg = hidden(lineEl('cd: no such file or directory'), animated);
+                    var up = hidden(upLine(folder), animated);
+                    var end = hidden(promptLine(folder, 'term-cmd'), animated);
+                    fileView.appendChild(cmd);
+                    fileView.appendChild(msg);
+                    fileView.appendChild(up);
+                    fileView.appendChild(end);
+                    if (animated) {
+                        ensureCursor();
+                        cursorAtLineEnd(cmd);
+                    }
+                    var typed = typeActions(cmd, 'cd ' + raw, 0);
+                    var outStart = typed.end + PAUSE_MS;
+                    var actions = typed.actions.concat([
+                        { at: outStart, fn: revealFn(msg, false) },
+                        { at: outStart + LINE_MS, fn: revealFn(up, false) },
+                        { at: outStart + LINE_MS + LINE_FADE_MS, fn: revealFn(end, true) }
+                    ]);
+                    setPath(folder);
+                    runActions(actions, null);
                 }
 
                 // The markdown the files use: headings, paragraphs, lists and fenced code, and inside them links, bold and `code`
@@ -529,220 +810,25 @@
                     });
                 }
 
-                // The cursor: a block the height of the text, in the body text colour. The script moves it with transform
-                var cursor = null;
-                function ensureCursor() {
-                    if (!cursor) {
-                        cursor = el('span', 'term-cursor');
-                        cursor.setAttribute('aria-hidden', 'true');
+                // The files are fetched once, when the page loads. A page that prints a file waits for its text
+                var content = {};   // a file's route -> { ok, text }, once it has loaded
+                var loading = {};   // a file's route -> its load promise
+                function loadFile(key) {
+                    if (!loading[key]) {
+                        loading[key] = fetch(new URL(key, document.baseURI))
+                            .then(function (res) {
+                                if (!res.ok) throw new Error('HTTP ' + res.status);
+                                return res.text();
+                            })
+                            .then(function (text) { content[key] = { ok: true, text: text }; },
+                                  function () { content[key] = { ok: false }; });
                     }
-                    if (!cursor.parentNode) terminal.appendChild(cursor);
-                }
-                function removeCursor() {
-                    if (cursor && cursor.parentNode) cursor.parentNode.removeChild(cursor);
-                }
-                function placeCursor(x, y, w, h) {
-                    ensureCursor();
-                    var box = terminal.getBoundingClientRect();
-                    cursor.style.width = w + 'px';
-                    cursor.style.height = h + 'px';
-                    cursor.style.transform = 'translate(' + (x - box.left) + 'px, ' + (y - box.top) + 'px)';
-                }
-                // After a character: at its right edge
-                function cursorAfterChar(span) {
-                    var r = span.getBoundingClientRect();
-                    placeCursor(r.right, r.top, r.width, r.height);
-                }
-                // At the end of a line: after its last text, or at the start of a blank line
-                function cursorAtLineEnd(line) {
-                    var size = parseFloat(getComputedStyle(line).fontSize);
-                    var range = document.createRange();
-                    range.selectNodeContents(line);
-                    var rects = Array.prototype.filter.call(range.getClientRects(), function (r) { return r.width > 0; });
-                    var last = rects[rects.length - 1];
-                    if (last) {
-                        placeCursor(last.right, last.top, size * 0.625, last.height);
-                    } else {
-                        var box = line.getBoundingClientRect();
-                        placeCursor(box.left, box.top, size * 0.625, box.height);
-                    }
+                    return loading[key];
                 }
 
-                function isAnimated() { return root.getAttribute('data-motion') === 'animated'; }
-                function keepInView(node) { node.scrollIntoView({ block: 'nearest' }); }
-
-                // A timeline runs each action at its time. When its last action has run, onDone is called, if there is one
-                var timeline = null;
-                function startTimeline(actions, onDone) {
-                    var tl = { actions: actions, ran: [], count: 0, timers: [], onDone: onDone };
-                    timeline = tl;
-                    root.classList.add('term-live');
-                    actions.forEach(function (a, i) {
-                        tl.timers.push(setTimeout(function () { runOne(tl, i); }, a.at));
-                    });
-                }
-                function runOne(tl, i) {
-                    if (timeline !== tl || tl.ran[i]) return;
-                    tl.ran[i] = true;
-                    tl.count++;
-                    tl.actions[i].fn(false);
-                    if (tl.count === tl.actions.length) {
-                        timeline = null;
-                        if (tl.onDone) tl.onDone();
-                    }
-                }
-                // A timeline that is running shows the rest at once, and its timers stop. onDone is not called
-                function finishTimeline() {
-                    var tl = timeline;
-                    if (!tl) return;
-                    timeline = null;
-                    tl.timers.forEach(clearTimeout);
-                    tl.actions.forEach(function (a, i) {
-                        if (!tl.ran[i]) {
-                            tl.ran[i] = true;
-                            a.fn(true);
-                        }
-                    });
-                }
-
-                // Each action changes the page. In animated mode (instant false) it fades in, and the cursor follows it. In minimal
-                // mode (instant true) it shows at once
-                function typeChar(ch) {
-                    return function (instant) {
-                        var span = el('span', 'term-char', ch);
-                        live.appendChild(span);
-                        if (!instant) {
-                            ensureCursor();
-                            cursorAfterChar(span);
-                        }
-                        keepInView(live);
-                    };
-                }
-                function showOutput(node) {
-                    return function (instant) {
-                        if (instant) {
-                            node.style.opacity = '1';
-                            sink.appendChild(node);
-                        } else {
-                            // Starts from opacity 0 and then goes to 1, so the fade runs
-                            node.classList.add('term-fade');
-                            node.style.opacity = '0';
-                            sink.appendChild(node);
-                            void node.offsetHeight;
-                            node.style.opacity = '1';
-                            ensureCursor();
-                            cursorAtLineEnd(node);
-                        }
-                        keepInView(node);
-                    };
-                }
-                function showPrompt(folder) {
-                    return function (instant) {
-                        var p = promptLine(folder);
-                        sink.appendChild(p);
-                        live = p;
-                        if (!instant) {
-                            ensureCursor();
-                            cursorAtLineEnd(p);
-                        }
-                        keepInView(p);
-                    };
-                }
-                // Turns the steps of a command into timed actions. A step types its command, waits, prints its output line by line,
-                // and shows a new prompt
-                function buildActions(steps) {
-                    var actions = [];
-                    var clock = 0;
-                    steps.forEach(function (step) {
-                        var t = clock;
-                        Array.from(step.text).forEach(function (ch, i) {
-                            if (i > 0) t += TYPE_MIN_MS + Math.random() * (TYPE_MAX_MS - TYPE_MIN_MS);
-                            actions.push({ at: t, fn: typeChar(ch) });
-                        });
-                        var outStart = t + PAUSE_MS;
-                        step.lines.forEach(function (node, i) {
-                            actions.push({ at: outStart + i * LINE_MS, fn: showOutput(node) });
-                        });
-                        var promptAt = outStart + (step.lines.length - 1) * LINE_MS + LINE_FADE_MS;
-                        actions.push({ at: promptAt, fn: showPrompt(step.promptFolder) });
-                        clock = promptAt + PAUSE_MS;
-                    });
-                    return actions;
-                }
-
-                // The two views. The tree stays in the page while a file is shown, so going back shows it as it was
-                function showTree() {
-                    if (view === 'tree') return;
-                    finishTimeline();
-                    view = 'tree';
-                    fileView.textContent = '';
-                    fileView.hidden = true;
-                    treeView.hidden = false;
-                    live = promptEnd;
-                    sink = null;
-                    if (isAnimated()) {
-                        ensureCursor();
-                        cursorAtLineEnd(promptEnd);
-                    }
-                }
-                function showFileView() {
-                    finishTimeline();
-                    view = 'file';
-                    treeView.hidden = true;
-                    fileView.hidden = false;
-                }
-                // Starts a subpage, or an error: its command types at a new prompt in the folder, then the output follows
-                function startFileView(steps, folder) {
-                    var prompt = promptLine(folder);
-                    fileView.textContent = '';
-                    fileView.appendChild(prompt);
-                    sink = fileView;
-                    live = prompt;
-                    var actions = buildActions(steps);
-                    if (isAnimated()) startTimeline(actions, null);
-                    else actions.forEach(function (a) { a.fn(true); });
-                }
-                // A file's steps: `cat` and the file's content, then the cd .. line back to the tree
-                function fileStep(key) {
-                    var c = content[key];
-                    var folder = folderOf(key);
-                    var lines = c && c.ok ? fileLines(key, c.text) : [lineEl('cat: ' + nameOf(key) + ': No such file or directory')];
-                    lines.push(upLine(folder));
-                    return { text: 'cat ' + nameOf(key), lines: lines, promptFolder: folder };
-                }
-                function errorStep(raw, folder) {
-                    return { text: 'cd ' + raw, lines: [lineEl('cd: no such file or directory'), upLine(folder)], promptFolder: folder };
-                }
-
-                // Shows a route: a file's subpage, or the tree with its folder open. The folders on the way open too
-                function applyRoute(key, raw) {
-                    if (key === null) {
-                        setPath(current.folder);
-                        showFileView();
-                        startFileView([errorStep(raw, current.folder)], current.folder);
-                        return;
-                    }
-                    if (isFile(key) && !content[key]) {
-                        loadFile(key).then(function () { if (lastRoute === key) applyRoute(key, key); });
-                        return;
-                    }
-                    expandPath(key);
-                    if (isFile(key)) {
-                        var folder = folderOf(key);
-                        setPath(folder, key);
-                        showFileView();
-                        renderTree(false);
-                        startFileView([fileStep(key)], folder);
-                    } else {
-                        showTree();
-                        setPath(key);
-                        renderTree(true);
-                    }
-                }
-
-                // The last route asked for. A hash change to it is not run again, since a click has already run it
+                // The last route asked for. A hash change to it is not run again, since the click that asked for it has run it
                 var lastRoute = null;
-                // The address the page opened on. It runs once the landing has played, unless the reader has already picked a route
+                // The address the page opened on. It runs once the landing has played, unless the reader has picked a route first
                 var initial = parseHash(location.hash);
                 var pendingInitial = true;
                 function settleInitial() {
@@ -751,35 +837,68 @@
                     lastRoute = routeId(initial.key, initial.raw);
                     applyRoute(initial.key, initial.raw);
                 }
-
-                // A click or the navbar: sets the address to the route and shows it
-                function navigate(key) {
+                // A user's action ends whatever is still animating, and takes the place of an address that is still waiting
+                function userAction() {
                     pendingInitial = false;
+                    flushAll();
+                }
+                // Shows a route: a file's page, or a folder's tree on a page of its own. The home route is the landing's tree
+                function applyRoute(key, raw) {
+                    if (key === null) {
+                        buildErrorPage(raw, isAnimated());
+                        return;
+                    }
+                    if (isFile(key)) {
+                        if (!content[key]) {
+                            loadFile(key).then(function () { if (lastRoute === key) applyRoute(key, key); });
+                            return;
+                        }
+                        if (pageKind === 'file' && pageFile === key) {
+                            setPath(folderOf(key), key);
+                            return;
+                        }
+                        buildFilePage(key, isAnimated());
+                        return;
+                    }
+                    if ((pageKind === 'home' || pageKind === 'dir') && pageFolder === key) {
+                        setPath(key);
+                        return;
+                    }
+                    buildTreePage(key, isAnimated(), false, null);
+                }
+                // A click or the navbar: sets the address to the route, and shows it
+                function navigate(key) {
+                    userAction();
                     lastRoute = key;
-                    if (location.hash !== hashFor(key)) location.hash = hashFor(key);
+                    setHash(key);
                     applyRoute(key, key);
                 }
-                // A click on a folder opens it, or closes it if it is open. It becomes the current path either way
+                // A click on a folder opens it in place, or closes it if it is open. It becomes the current path either way
                 function toggleDir(key, link) {
-                    pendingInitial = false;
-                    showTree();
+                    userAction();
                     var active = document.activeElement;
                     expanded[key] = !expanded[key];
                     setPath(key);
                     lastRoute = key;
-                    if (location.hash !== hashFor(key)) location.hash = hashFor(key);
-                    renderTree(!!expanded[key]);
-                    if (active && !active.isConnected) link.focus({ preventScroll: true });
+                    setHash(key);
+                    var animated = isAnimated();
+                    var rows = syncOutput(animated, 0, false);
+                    runActions(rows.actions, null);
+                    if (animated) {
+                        ensureCursor();
+                        cursorAtLineEnd(treePrompt);
+                    }
+                    if (active && !active.isConnected && link.isConnected) link.focus({ preventScroll: true });
                 }
 
-                // The file loads and the tree are ready. Links that name a route get it as data, so a click can run it
+                // Links that name a route get it as data. The tree's own links are made with it
                 Array.prototype.forEach.call(document.querySelectorAll('a[href^="#/"]'), function (a) {
                     var p = parseHash(a.getAttribute('href'));
                     if (p.key !== null) a.setAttribute('data-route', p.key);
                 });
                 Object.keys(FILES).forEach(function (key) { loadFile(key); });
 
-                // A click on a route runs it. The browser's own change of address is then not run again
+                // A click on a route runs it. The browser's change of address is then not run again
                 document.addEventListener('click', function (e) {
                     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
                     var link = e.target.closest ? e.target.closest('a[data-route]') : null;
@@ -794,134 +913,35 @@
                     var p = parseHash(location.hash);
                     var id = routeId(p.key, p.raw);
                     if (id === lastRoute) return;
-                    pendingInitial = false;
+                    userAction();
                     lastRoute = id;
                     applyRoute(p.key, p.raw);
                 });
-                // Leaving animated mode shows everything at once and stops the timeline. Switching back later does not replay the landing
+                // Leaving animated mode shows everything at once and stops the animations. Going back to animated mode shows the
+                // terminal again, so the page does not stay hidden
                 new MutationObserver(function () {
-                    if (isAnimated()) return;
-                    finishTimeline();
+                    if (isAnimated()) {
+                        root.classList.add('term-live');
+                        return;
+                    }
+                    flushAll();
                     removeCursor();
                     root.classList.remove('term-live');
                     settleInitial();
                 }).observe(root, { attributes: true, attributeFilter: ['data-motion'] });
 
-                // The landing types whoami and tree. Its tree lines are the tree, so they show as the tree renders
-                function splitChars(node, spans) {
-                    Array.prototype.slice.call(node.childNodes).forEach(function (child) {
-                        if (child.nodeType === 3) {
-                            var fragment = document.createDocumentFragment();
-                            Array.prototype.forEach.call(child.textContent, function (ch) {
-                                var span = el('span', 'term-char', ch);
-                                span.style.opacity = '0';
-                                fragment.appendChild(span);
-                                spans.push(span);
-                            });
-                            node.replaceChild(fragment, child);
-                        } else if (child.nodeType === 1) {
-                            splitChars(child, spans);
-                        }
-                    });
-                    return spans;
-                }
-                // Schedules the typed characters of a command: the first at `start`, then each after a random interval
-                function typeSpans(spans, start, actions) {
-                    var at = start;
-                    spans.forEach(function (span, i) {
-                        if (i > 0) at += TYPE_MIN_MS + Math.random() * (TYPE_MAX_MS - TYPE_MIN_MS);
-                        actions.push({ at: at, span: span, fn: showSpan(span) });
-                    });
-                    return at;
-                }
-                function showSpan(span) {
-                    return function (instant) {
-                        span.style.opacity = '1';
-                        if (!instant) {
-                            ensureCursor();
-                            cursorAfterChar(span);
-                        }
-                    };
-                }
-                function showLandingLine(line, moveCursor) {
-                    return function (instant) {
-                        line.style.opacity = '1';
-                        if (!instant && moveCursor) {
-                            ensureCursor();
-                            cursorAtLineEnd(line);
-                        }
-                    };
-                }
-                function moveCursorTo(line) {
-                    return function (instant) {
-                        if (!instant) {
-                            ensureCursor();
-                            cursorAtLineEnd(line);
-                        }
-                    };
-                }
-                function landingActions() {
-                    var actions = [];
-                    var cmd1 = document.getElementById('term-cmd-1');
-                    var cmd2 = document.getElementById('term-cmd-2');
-                    var printed = document.getElementById('term-print-1');
-                    var outLines = Array.prototype.slice.call(output.querySelectorAll('.term-line'));
-
-                    // The first prompt, `~$` and the space after it, shows from the start. Only `whoami` types, after the wait
-                    var cmd1Spans = splitChars(cmd1, []);
-                    var promptChars = cmd1.querySelector('.term-prompt').textContent.length + 1;
-                    cmd1Spans.slice(0, promptChars).forEach(function (span) { span.style.opacity = '1'; });
-                    var typed1End = typeSpans(cmd1Spans.slice(promptChars), FADE_MS + AFTER_FADE_MS, actions);
-                    // The output of `whoami` appears at once, together with the second prompt
-                    var outputAt = typed1End + PAUSE_MS;
-                    actions.push({ at: outputAt, line: printed, fn: showLandingLine(printed, true) });
-                    var cmd2Spans = splitChars(cmd2, []);
-                    var promptChars2 = cmd2.querySelector('.term-prompt').textContent.length + 1;
-                    cmd2Spans.slice(0, promptChars2).forEach(function (span) {
-                        actions.push({ at: outputAt, span: span, fn: showSpan(span) });
-                    });
-                    // `tree` types after the second prompt, after a short pause
-                    var typed2End = typeSpans(cmd2Spans.slice(promptChars2), outputAt + PROMPT_PAUSE_MS, actions);
-                    // The tree fades in line by line. The final prompt fades in as the tree starts, and the cursor moves to it once the
-                    // tree has faded in
-                    var treeAt = typed2End + PAUSE_MS;
-                    var treeIn = treeAt;
-                    outLines.forEach(function (line, i) {
-                        line.classList.add('term-fade');
-                        actions.push({ at: treeAt + i * LINE_MS, line: line, fn: showLandingLine(line, true) });
-                        treeIn = treeAt + i * LINE_MS + LINE_FADE_MS;
-                    });
-                    promptEnd.classList.add('term-fade');
-                    actions.push({ at: treeAt, line: promptEnd, fn: showLandingLine(promptEnd, false) });
-                    actions.push({ at: treeIn, fn: moveCursorTo(promptEnd) });
-                    return { actions: actions, navStart: treeIn + NAV_GAP_MS };
-                }
-
-                // The tree as it starts: the root, with no folder open. Then the landing, or at once in minimal mode
+                // The landing. In animated mode it plays on the first page, and the address that opened the page runs after it
                 setPath('');
-                renderTree(false);
+                if (isAnimated()) root.classList.add('term-live');
                 lastRoute = routeId(initial.key, initial.raw);
-                if (isAnimated()) {
-                    var landing = landingActions();
-                    landing.actions.forEach(function (a) {
-                        if (a.span) a.span.style.opacity = '0';
-                        if (a.line) a.line.style.opacity = '0';
-                    });
-                    ensureCursor();
-                    var first = landing.actions[0].span.getBoundingClientRect();
-                    placeCursor(first.left, first.top, first.width, first.height);
-                    navbar.style.setProperty('--drop-delay', landing.navStart + 'ms');
-                    startTimeline(landing.actions, settleInitial);
-                } else {
-                    settleInitial();
-                }
+                buildTreePage('', isAnimated(), true, settleInitial);
             }
 
             // If the terminal fails, the page shows everything: the hidden states apply only while term-failed is absent
             try {
                 startTerminal();
             } catch (e) {
-                document.querySelectorAll('#terminal .term-char, #terminal .term-line').forEach(function (el) { el.style.opacity = '1'; });
+                document.querySelectorAll('#terminal .term-char, #terminal .term-line, #page-content .term-block').forEach(function (el) { el.style.opacity = '1'; });
                 document.documentElement.classList.add('term-failed');
             }
         </script>

@@ -410,6 +410,7 @@ footer {
     min-height: 100vh;
     padding: 72px 0;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
 }
@@ -595,6 +596,32 @@ html.term-live[data-motion="animated"] .term-fade {
 .terminal > * {
     scroll-margin-top: 7rem;
     scroll-margin-bottom: 1.5rem;
+}
+
+/* A page that shows a folder or a file starts its terminal at the top, just under the navbar, rather than in the middle */
+.landing.is-top {
+    justify-content: flex-start;
+}
+
+/* The rendered markdown of a file, printed below the terminal. It is page text, so it takes the page's colours */
+.page-content {
+    width: 100%;
+    max-width: 760px;
+    margin-top: 2rem;
+}
+
+.page-content > * {
+    scroll-margin-top: 7rem;
+}
+
+.page-content code,
+.page-content .term-block.term-code {
+    background: var(--surface);
+}
+
+.page-content a:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 3px;
 }
 
 /* Mobile responsive */
