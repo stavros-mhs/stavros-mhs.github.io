@@ -543,6 +543,12 @@ html.term-live[data-motion="animated"] .term-fade {
     }
 }
 
+/* A typed command in a subpage wraps at its spaces, so on a phone a long path does not run past the terminal's edge */
+.term-line.term-cmd {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
 /* Subpage blocks: the text of a .md file. They wrap, unlike the tree lines, and take the terminal's text colour */
 .term-block {
     margin: 0 0 0.75em;

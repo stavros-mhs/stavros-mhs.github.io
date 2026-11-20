@@ -73,6 +73,7 @@
 
             <div class="landing">
                 <div class="terminal" id="terminal" role="region" aria-label="Terminal">
+                    <div id="tree-view">
                     <p class="term-line" id="term-cmd-1"><span class="term-prompt">~$</span> whoami</p>
                     <p class="term-line" id="term-print-1">stavros-mhs</p>
                     <p class="term-line" id="term-cmd-2"><span class="term-prompt">~$</span> tree</p>
@@ -86,6 +87,8 @@
                         <p class="term-line">4 directories</p>
                     </div>
                     <p class="term-line" id="term-prompt-end"><span class="term-prompt">~$</span> </p>
+                    </div>
+                    <div id="file-view" hidden></div>
                 </div>
             </div>
             <noscript>
@@ -206,21 +209,25 @@
         </script>
 
         <script>
-            // The landing terminal, and the navigation after it. In animated mode the landing types whoami and tree at human speed.
-            // Then the terminal takes commands from the links (a folder or a file, the navbar and cd ..) and from the address after #,
-            // which covers back, forward and a typed address. A command types into the current prompt, prints its output, and then
-            // shows a new prompt with the cursor after it. Minimal mode shows each command at once. Without JavaScript the landing
-            // stays as it is, and the noscript tree shows. The times are in ms from the start, and the constants below set them.
-            // The styles are in style.css
+            // The landing terminal and the tree. The tree is the terminal's first output. A click on a directory opens or closes it
+            // in place, and its rows appear under it. A click on a file replaces the tree with the file's subpage, and the subpage's
+            // cd .. line returns to the tree. The title and the prompt show the current path, and the address after # is the same path.
+            // Animated mode types whoami and tree at human speed, and fades in what appears. Minimal mode shows each change at once.
+            // Without JavaScript the landing stays as it is, and the noscript tree shows. The times are in ms, and the constants below
+            // set them. The styles are in style.css
             function startTerminal() {
                 var root = document.documentElement;
                 var terminal = document.getElementById('terminal');
+                var treeView = document.getElementById('tree-view');
+                var fileView = document.getElementById('file-view');
+                var output = document.getElementById('term-output');
+                var promptEnd = document.getElementById('term-prompt-end');
                 var navbar = document.querySelector('.navbar');
 
                 // Times in ms. The fade (750 ms, cubic-bezier(0.08, 0.52, 0.52, 1)) and the navbar's drop (500 ms, ease-out) are in the CSS
                 var FADE_MS = 750;         // the landing's terminal fades in
                 var AFTER_FADE_MS = 400;   // after the fade, before the first command
-                var PAUSE_MS = 300;        // after a command is typed, before its output appears. Also between commands
+                var PAUSE_MS = 300;        // after a command is typed, before its output appears
                 var PROMPT_PAUSE_MS = 300; // after the second prompt appears, before `tree` starts to type
                 var LINE_MS = 120;         // the output pace: each line or block starts this long after the one above
                 var LINE_FADE_MS = 250;    // each line or block fades in over this long
@@ -228,43 +235,20 @@
                 var TYPE_MIN_MS = 90;      // a typed character follows the one before after a random interval in this range
                 var TYPE_MAX_MS = 170;
 
-                // The routes. A folder's route is its path, and the root's is empty. A file's route is its path in the repository.
-                // The address after # is the route, with a leading / and, for a folder, a trailing /
                 var REPO = {
                     aralloc: 'https://github.com/stavros-mhs/aralloc',
                     ginny: 'https://github.com/stavros-mhs/Ginny'
                 };
-                // Each folder's listing: its header, its rows and its count line. A row is [prefix, name, target], where the target is a
-                // route, or the repository's URL for a source/ entry. The blank line before the count, and the cd .. line, are added
-                var LISTINGS = {
-                    '': { header: '~/', count: '4 directories', rows: [
-                        ['├── ', 'user/', 'user'],
-                        ['├── ', 'projects/', 'projects'],
-                        ['├── ', 'skills/', 'skills'],
-                        ['└── ', 'contact/', 'contact']
-                    ] },
-                    'user': { header: 'user/', count: '0 directories, 2 files', rows: [
-                        ['├── ', 'HOBBIES.md', 'user/HOBBIES.md'],
-                        ['└── ', 'WHOAMI.md', 'user/WHOAMI.md']
-                    ] },
-                    'projects': { header: 'projects/', count: '2 directories', rows: [
-                        ['├── ', 'aralloc/', 'projects/aralloc'],
-                        ['└── ', 'ginny/', 'projects/ginny']
-                    ] },
-                    'projects/aralloc': { header: 'projects/aralloc/', count: '1 directory, 1 file', rows: [
-                        ['├── ', 'BRIEF.md', 'projects/aralloc/BRIEF.md'],
-                        ['└── ', 'source/', REPO.aralloc]
-                    ] },
-                    'projects/ginny': { header: 'projects/ginny/', count: '1 directory, 1 file', rows: [
-                        ['├── ', 'BRIEF.md', 'projects/ginny/BRIEF.md'],
-                        ['└── ', 'source/', REPO.ginny]
-                    ] },
-                    'skills': { header: 'skills/', count: '0 directories, 1 file', rows: [
-                        ['└── ', 'SKILLS.md', 'skills/SKILLS.md']
-                    ] },
-                    'contact': { header: 'contact/', count: '0 directories, 1 file', rows: [
-                        ['└── ', 'INFO.md', 'contact/INFO.md']
-                    ] }
+                // The tree. Each folder lists its rows as [name, target]. A target is a route, or the repository's URL for a source/ entry.
+                // The root's route is empty, and a file's route is its path in the repository
+                var ROWS = {
+                    '': [['user/', 'user'], ['projects/', 'projects'], ['skills/', 'skills'], ['contact/', 'contact']],
+                    'user': [['HOBBIES.md', 'user/HOBBIES.md'], ['WHOAMI.md', 'user/WHOAMI.md']],
+                    'projects': [['aralloc/', 'projects/aralloc'], ['ginny/', 'projects/ginny']],
+                    'projects/aralloc': [['BRIEF.md', 'projects/aralloc/BRIEF.md'], ['source/', REPO.aralloc]],
+                    'projects/ginny': [['BRIEF.md', 'projects/ginny/BRIEF.md'], ['source/', REPO.ginny]],
+                    'skills': [['SKILLS.md', 'skills/SKILLS.md']],
+                    'contact': [['INFO.md', 'contact/INFO.md']]
                 };
                 var FILES = {
                     'user/HOBBIES.md': true,
@@ -276,21 +260,12 @@
                 };
 
                 function has(map, key) { return Object.prototype.hasOwnProperty.call(map, key); }
-                function isFolder(key) { return has(LISTINGS, key); }
+                function isFolder(key) { return has(ROWS, key); }
                 function isFile(key) { return has(FILES, key); }
+                function kindOf(target) { return /^https:\/\//.test(target) ? 'repo' : isFolder(target) ? 'dir' : 'file'; }
                 function folderOf(key) { return isFile(key) ? key.slice(0, key.lastIndexOf('/')) : key; }
                 function parentOf(folder) { var i = folder.lastIndexOf('/'); return i === -1 ? '' : folder.slice(0, i); }
                 function nameOf(key) { return key.slice(key.lastIndexOf('/') + 1); }
-                // True when `folder` is the target itself or one of its ancestors
-                function contains(folder, target) {
-                    return folder === '' || target === folder || target.indexOf(folder + '/') === 0;
-                }
-                // The folder one step below `folder` on the way to `target`
-                function childToward(folder, target) {
-                    var rest = folder === '' ? target : target.slice(folder.length + 1);
-                    var seg = rest.split('/')[0];
-                    return folder === '' ? seg : folder + '/' + seg;
-                }
                 function hashFor(key) { return key === '' ? '#/' : isFile(key) ? '#/' + key : '#/' + key + '/'; }
                 function promptText(folder) { return folder === '' ? '~$' : '~/' + folder + '$'; }
                 // The route in an address after #. The key is null for a path that is not a route, and raw is the path as typed
@@ -300,6 +275,8 @@
                     var key = raw.replace(/\/$/, '');
                     return { key: (isFolder(key) || isFile(key)) ? key : null, raw: raw };
                 }
+                // The route that a hash change or a click is compared with. A path that is not a route gets its own id
+                function routeId(key, raw) { return key !== null ? key : '?' + raw; }
 
                 // Nodes are built with the DOM and textContent, never from HTML strings
                 function el(tag, cls, text) {
@@ -309,45 +286,148 @@
                     return node;
                 }
                 function lineEl(text, cls) { return el('p', cls ? 'term-line ' + cls : 'term-line', text); }
-                // A link to a route. Its data says which route it goes to and which command it types
-                function routeLink(key, label, cmd) {
+                // A link to a route. A click on it runs the route; a folder's link (data-toggle) also opens or closes it
+                function routeLink(key, label) {
                     var a = el('a', null, label);
                     a.setAttribute('href', hashFor(key));
                     a.setAttribute('data-route', key);
-                    a.setAttribute('data-cmd', cmd);
                     return a;
                 }
                 function upLine(folder) {
                     var p = lineEl('');
-                    p.appendChild(routeLink(folder, 'cd ..', 'cd ..'));
+                    p.appendChild(routeLink(folder, 'cd ..'));
                     return p;
                 }
                 function promptLine(folder) {
-                    var p = lineEl('');
+                    var p = lineEl('', 'term-cmd');
                     p.appendChild(el('span', 'term-prompt', promptText(folder)));
                     p.appendChild(document.createTextNode(' '));
                     return p;
                 }
-                function listingLines(folder) {
-                    var listing = LISTINGS[folder];
-                    var lines = [lineEl(listing.header)];
-                    listing.rows.forEach(function (row) {
-                        var p = lineEl(row[0]);
-                        if (/^https:\/\//.test(row[2])) {
-                            var repo = el('a', 'term-repo', row[1]);
-                            repo.setAttribute('href', row[2]);
-                            repo.setAttribute('target', '_blank');
-                            repo.setAttribute('rel', 'noopener');
-                            p.appendChild(repo);
+
+                // The tree. Folders that are open have their rows under them, and the rows keep their branch glyphs. A row's node is
+                // kept while the row shows, so a row that closes and opens again is the same element
+                var expanded = {};                         // a folder's route -> true while it is open
+                var rowNodes = {};                         // a row's target -> its element
+                var headerNode = lineEl('~/');
+                var blankNode = lineEl('', 'term-blank');
+                var countNode = lineEl('');
+
+                // The rows that show, in order, with the branch glyphs they print with
+                function visibleRows() {
+                    var items = [];
+                    (function walk(folder, indent) {
+                        var rows = ROWS[folder];
+                        rows.forEach(function (row, i) {
+                            var last = i === rows.length - 1;
+                            var kind = kindOf(row[1]);
+                            items.push({ key: row[1], name: row[0], prefix: indent + (last ? '└── ' : '├── '), kind: kind });
+                            if (kind === 'dir' && expanded[row[1]]) walk(row[1], indent + (last ? '    ' : '│   '));
+                        });
+                    })('', '');
+                    return items;
+                }
+                function rowNode(item) {
+                    if (!rowNodes[item.key]) {
+                        var p = lineEl(item.prefix);
+                        var a;
+                        if (item.kind === 'repo') {
+                            a = el('a', 'term-repo', item.name);
+                            a.setAttribute('href', item.key);
+                            a.setAttribute('target', '_blank');
+                            a.setAttribute('rel', 'noopener');
                         } else {
-                            p.appendChild(routeLink(row[2], row[1], (isFile(row[2]) ? 'cat ' : 'cd ') + row[1]));
+                            a = routeLink(item.key, item.name);
+                            if (item.kind === 'dir') a.setAttribute('data-toggle', '');
                         }
-                        lines.push(p);
+                        p.appendChild(a);
+                        rowNodes[item.key] = p;
+                    }
+                    return rowNodes[item.key];
+                }
+                // The count line counts what shows. Directories are counted as the tree counts them, and a source/ entry is a directory
+                function countText(dirs, files) {
+                    var s = dirs + (dirs === 1 ? ' directory' : ' directories');
+                    if (files) s += ', ' + files + (files === 1 ? ' file' : ' files');
+                    return s;
+                }
+                // Shows the tree as it stands. Rows that are new fade in one by one when animate is set, and the page keeps the newest
+                // of them in view. The cursor, if it is on the tree, moves with the prompt
+                function renderTree(animate) {
+                    var items = visibleRows();
+                    var nodes = [headerNode].concat(items.map(rowNode), [blankNode, countNode]);
+                    var dirs = 0;
+                    var files = 0;
+                    items.forEach(function (item) { if (item.kind === 'file') files++; else dirs++; });
+                    countNode.textContent = countText(dirs, files);
+                    Array.prototype.slice.call(output.children).forEach(function (child) {
+                        if (nodes.indexOf(child) === -1) output.removeChild(child);
                     });
-                    lines.push(lineEl('', 'term-blank'));
-                    lines.push(lineEl(listing.count));
-                    if (folder !== '') lines.push(upLine(parentOf(folder)));
-                    return lines;
+                    // Only the rows that are out of place move, so a focused link keeps its focus
+                    var fresh = [];
+                    var ref = output.firstChild;
+                    nodes.forEach(function (node) {
+                        if (node === ref) {
+                            ref = ref.nextSibling;
+                            return;
+                        }
+                        if (node.parentNode !== output) fresh.push(node);
+                        output.insertBefore(node, ref);
+                    });
+                    var rows = fresh.filter(function (node) { return node !== headerNode && node !== blankNode && node !== countNode; });
+                    if (animate && isAnimated()) {
+                        rows.forEach(function (node, i) {
+                            node.classList.add('term-fade');
+                            node.style.opacity = '0';
+                            void node.offsetHeight;
+                            setTimeout(function () { node.style.opacity = '1'; keepInView(node); }, i * LINE_MS);
+                        });
+                    } else {
+                        rows.forEach(function (node) { node.style.opacity = '1'; });
+                    }
+                    if (rows.length) keepInView(rows[rows.length - 1]);
+                    if (view === 'tree' && !timeline && isAnimated()) {
+                        ensureCursor();
+                        cursorAtLineEnd(promptEnd);
+                    }
+                }
+                // Opens every folder on the way to a route, so the route shows in the tree
+                function expandPath(key) {
+                    var acc = '';
+                    (key ? key.split('/') : []).forEach(function (part) {
+                        acc = acc ? acc + '/' + part : part;
+                        if (isFolder(acc)) expanded[acc] = true;
+                    });
+                }
+
+                // Where the terminal is: the folder of the path, and the file shown, if any. The title and the prompt show it
+                var current = { folder: '', file: null };
+                function setPath(folder, file) {
+                    current = { folder: folder, file: file || null };
+                    var path = file ? '/' + file : (folder ? '/' + folder : '/');
+                    document.title = path + ' — Stavros Michailidis';
+                    promptEnd.querySelector('.term-prompt').textContent = promptText(folder);
+                }
+
+                // The two views: the tree, or a file's subpage (or an error). The prompt that takes a typed command, and the place
+                // where the new nodes go, belong to the view on screen
+                var view = 'tree';
+                var live = promptEnd;
+                var sink = null;
+
+                var content = {};   // a file's route -> { ok, text }, once it has loaded
+                var loading = {};   // a file's route -> its load promise
+                function loadFile(key) {
+                    if (!loading[key]) {
+                        loading[key] = fetch(new URL(key, document.baseURI))
+                            .then(function (res) {
+                                if (!res.ok) throw new Error('HTTP ' + res.status);
+                                return res.text();
+                            })
+                            .then(function (text) { content[key] = { ok: true, text: text }; },
+                                  function () { content[key] = { ok: false }; });
+                    }
+                    return loading[key];
                 }
 
                 // The markdown the files use: headings, paragraphs, lists and fenced code, and inside them links, bold and `code`
@@ -449,32 +529,8 @@
                     });
                 }
 
-                // The files are fetched once, when the page loads. A command that prints a file waits for its text
-                var content = {};   // a file's route -> { ok, text }, once it has loaded
-                var loading = {};   // a file's route -> its load promise
-                function loadFile(key) {
-                    if (!loading[key]) {
-                        loading[key] = fetch(new URL(key, document.baseURI))
-                            .then(function (res) {
-                                if (!res.ok) throw new Error('HTTP ' + res.status);
-                                return res.text();
-                            })
-                            .then(function (text) { content[key] = { ok: true, text: text }; },
-                                  function () { content[key] = { ok: false }; });
-                    }
-                    return loading[key];
-                }
-
-                // Where the terminal is: the folder that the prompt shows, and the file being shown, if any
-                var cur = { folder: '', file: null };
-                // The prompt that takes the next command. It starts as the landing's last prompt
-                var live = document.getElementById('term-prompt-end');
-                var queue = [];        // commands waiting to run, in order
-                var busy = false;      // true while a timeline runs
-                var timeline = null;   // the running timeline
+                // The cursor: a block the height of the text, in the body text colour. The script moves it with transform
                 var cursor = null;
-                var lastRoute = null;  // the route last asked for. A hash change to that route is not run again
-
                 function ensureCursor() {
                     if (!cursor) {
                         cursor = el('span', 'term-cursor');
@@ -485,7 +541,6 @@
                 function removeCursor() {
                     if (cursor && cursor.parentNode) cursor.parentNode.removeChild(cursor);
                 }
-                // The cursor is a block the height of the text, in the body text colour. The script moves it with transform
                 function placeCursor(x, y, w, h) {
                     ensureCursor();
                     var box = terminal.getBoundingClientRect();
@@ -516,11 +571,11 @@
                 function isAnimated() { return root.getAttribute('data-motion') === 'animated'; }
                 function keepInView(node) { node.scrollIntoView({ block: 'nearest' }); }
 
-                // A timeline runs each action at its time. It ends when its last action has run, and the next command then starts
-                function startTimeline(actions) {
-                    var tl = { actions: actions, ran: [], count: 0, timers: [] };
+                // A timeline runs each action at its time. When its last action has run, onDone is called, if there is one
+                var timeline = null;
+                function startTimeline(actions, onDone) {
+                    var tl = { actions: actions, ran: [], count: 0, timers: [], onDone: onDone };
                     timeline = tl;
-                    busy = true;
                     root.classList.add('term-live');
                     actions.forEach(function (a, i) {
                         tl.timers.push(setTimeout(function () { runOne(tl, i); }, a.at));
@@ -533,16 +588,14 @@
                     tl.actions[i].fn(false);
                     if (tl.count === tl.actions.length) {
                         timeline = null;
-                        busy = false;
-                        pump();
+                        if (tl.onDone) tl.onDone();
                     }
                 }
-                // Leaving animated mode: the rest of the timeline shows at once, and its timers stop
+                // A timeline that is running shows the rest at once, and its timers stop. onDone is not called
                 function finishTimeline() {
                     var tl = timeline;
                     if (!tl) return;
                     timeline = null;
-                    busy = false;
                     tl.timers.forEach(clearTimeout);
                     tl.actions.forEach(function (a, i) {
                         if (!tl.ran[i]) {
@@ -569,12 +622,12 @@
                     return function (instant) {
                         if (instant) {
                             node.style.opacity = '1';
-                            terminal.appendChild(node);
+                            sink.appendChild(node);
                         } else {
                             // Starts from opacity 0 and then goes to 1, so the fade runs
                             node.classList.add('term-fade');
                             node.style.opacity = '0';
-                            terminal.appendChild(node);
+                            sink.appendChild(node);
                             void node.offsetHeight;
                             node.style.opacity = '1';
                             ensureCursor();
@@ -586,7 +639,7 @@
                 function showPrompt(folder) {
                     return function (instant) {
                         var p = promptLine(folder);
-                        terminal.appendChild(p);
+                        sink.appendChild(p);
                         live = p;
                         if (!instant) {
                             ensureCursor();
@@ -595,57 +648,8 @@
                         keepInView(p);
                     };
                 }
-
-                // The steps of a click: one command, to the route the link names
-                function clickStep(item) {
-                    return isFile(item.key) ? catStep(item.cmd, item.key) : cdStep(item.cmd, item.key);
-                }
-                // The steps of an address: from where the terminal is to the route, one cd at a time, then cat for a file
-                function chainSteps(key, raw) {
-                    if (key === null) return [errStep('cd ' + raw, 'cd: no such file or directory')];
-                    var steps = [];
-                    var target = isFile(key) ? folderOf(key) : key;
-                    if (cur.file && !isFile(key) && target === cur.folder) {
-                        // Back from a file to its folder's listing
-                        steps.push(cdStep('cd ..', target));
-                    } else {
-                        var f = cur.folder;
-                        while (!contains(f, target)) {
-                            var up = parentOf(f);
-                            steps.push(cdStep('cd ..', up));
-                            f = up;
-                        }
-                        while (f !== target) {
-                            var down = childToward(f, target);
-                            steps.push(cdStep('cd ' + nameOf(down) + '/', down));
-                            f = down;
-                        }
-                    }
-                    if (isFile(key)) steps.push(catStep('cat ' + nameOf(key), key));
-                    return steps;
-                }
-                function cdStep(text, folder) {
-                    cur = { folder: folder, file: null };
-                    return { text: text, lines: listingLines(folder), promptFolder: folder };
-                }
-                function catStep(text, key) {
-                    var folder = folderOf(key);
-                    var c = content[key];
-                    if (!c || !c.ok) {
-                        cur = { folder: folder, file: null };
-                        return errStep(text, 'cat: ' + nameOf(key) + ': No such file or directory');
-                    }
-                    cur = { folder: folder, file: key };
-                    var lines = fileLines(key, c.text);
-                    lines.push(upLine(folder));
-                    return { text: text, lines: lines, promptFolder: folder };
-                }
-                function errStep(text, message) {
-                    return { text: text, lines: [lineEl(message)], promptFolder: cur.folder };
-                }
-
-                // Turns the steps of a command into timed actions. Each step types its command, waits, prints its output line by
-                // line, and shows a new prompt. The next step starts after a pause
+                // Turns the steps of a command into timed actions. A step types its command, waits, prints its output line by line,
+                // and shows a new prompt
                 function buildActions(steps) {
                     var actions = [];
                     var clock = 0;
@@ -666,25 +670,144 @@
                     return actions;
                 }
 
-                // Runs the queued commands in order. A command waits while a timeline runs, and while a file it prints is loading
-                function pump() {
-                    while (!busy && queue.length) {
-                        var item = queue[0];
-                        if (item.key !== null && isFile(item.key) && !content[item.key]) {
-                            loadFile(item.key).then(pump);
-                            return;
-                        }
-                        queue.shift();
-                        var actions = buildActions(item.click ? [clickStep(item)] : chainSteps(item.key, item.raw));
-                        if (isAnimated()) {
-                            startTimeline(actions);
-                            return;
-                        }
-                        actions.forEach(function (a) { a.fn(true); });
+                // The two views. The tree stays in the page while a file is shown, so going back shows it as it was
+                function showTree() {
+                    if (view === 'tree') return;
+                    finishTimeline();
+                    view = 'tree';
+                    fileView.textContent = '';
+                    fileView.hidden = true;
+                    treeView.hidden = false;
+                    live = promptEnd;
+                    sink = null;
+                    if (isAnimated()) {
+                        ensureCursor();
+                        cursorAtLineEnd(promptEnd);
+                    }
+                }
+                function showFileView() {
+                    finishTimeline();
+                    view = 'file';
+                    treeView.hidden = true;
+                    fileView.hidden = false;
+                }
+                // Starts a subpage, or an error: its command types at a new prompt in the folder, then the output follows
+                function startFileView(steps, folder) {
+                    var prompt = promptLine(folder);
+                    fileView.textContent = '';
+                    fileView.appendChild(prompt);
+                    sink = fileView;
+                    live = prompt;
+                    var actions = buildActions(steps);
+                    if (isAnimated()) startTimeline(actions, null);
+                    else actions.forEach(function (a) { a.fn(true); });
+                }
+                // A file's steps: `cat` and the file's content, then the cd .. line back to the tree
+                function fileStep(key) {
+                    var c = content[key];
+                    var folder = folderOf(key);
+                    var lines = c && c.ok ? fileLines(key, c.text) : [lineEl('cat: ' + nameOf(key) + ': No such file or directory')];
+                    lines.push(upLine(folder));
+                    return { text: 'cat ' + nameOf(key), lines: lines, promptFolder: folder };
+                }
+                function errorStep(raw, folder) {
+                    return { text: 'cd ' + raw, lines: [lineEl('cd: no such file or directory'), upLine(folder)], promptFolder: folder };
+                }
+
+                // Shows a route: a file's subpage, or the tree with its folder open. The folders on the way open too
+                function applyRoute(key, raw) {
+                    if (key === null) {
+                        setPath(current.folder);
+                        showFileView();
+                        startFileView([errorStep(raw, current.folder)], current.folder);
+                        return;
+                    }
+                    if (isFile(key) && !content[key]) {
+                        loadFile(key).then(function () { if (lastRoute === key) applyRoute(key, key); });
+                        return;
+                    }
+                    expandPath(key);
+                    if (isFile(key)) {
+                        var folder = folderOf(key);
+                        setPath(folder, key);
+                        showFileView();
+                        renderTree(false);
+                        startFileView([fileStep(key)], folder);
+                    } else {
+                        showTree();
+                        setPath(key);
+                        renderTree(true);
                     }
                 }
 
-                // The landing. It types the first prompt's `whoami` and then the second prompt's `tree`, and its output fades in
+                // The last route asked for. A hash change to it is not run again, since a click has already run it
+                var lastRoute = null;
+                // The address the page opened on. It runs once the landing has played, unless the reader has already picked a route
+                var initial = parseHash(location.hash);
+                var pendingInitial = true;
+                function settleInitial() {
+                    if (!pendingInitial) return;
+                    pendingInitial = false;
+                    lastRoute = routeId(initial.key, initial.raw);
+                    applyRoute(initial.key, initial.raw);
+                }
+
+                // A click or the navbar: sets the address to the route and shows it
+                function navigate(key) {
+                    pendingInitial = false;
+                    lastRoute = key;
+                    if (location.hash !== hashFor(key)) location.hash = hashFor(key);
+                    applyRoute(key, key);
+                }
+                // A click on a folder opens it, or closes it if it is open. It becomes the current path either way
+                function toggleDir(key, link) {
+                    pendingInitial = false;
+                    showTree();
+                    var active = document.activeElement;
+                    expanded[key] = !expanded[key];
+                    setPath(key);
+                    lastRoute = key;
+                    if (location.hash !== hashFor(key)) location.hash = hashFor(key);
+                    renderTree(!!expanded[key]);
+                    if (active && !active.isConnected) link.focus({ preventScroll: true });
+                }
+
+                // The file loads and the tree are ready. Links that name a route get it as data, so a click can run it
+                Array.prototype.forEach.call(document.querySelectorAll('a[href^="#/"]'), function (a) {
+                    var p = parseHash(a.getAttribute('href'));
+                    if (p.key !== null) a.setAttribute('data-route', p.key);
+                });
+                Object.keys(FILES).forEach(function (key) { loadFile(key); });
+
+                // A click on a route runs it. The browser's own change of address is then not run again
+                document.addEventListener('click', function (e) {
+                    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                    var link = e.target.closest ? e.target.closest('a[data-route]') : null;
+                    if (!link) return;
+                    e.preventDefault();
+                    var key = link.getAttribute('data-route');
+                    if (link.hasAttribute('data-toggle')) toggleDir(key, link);
+                    else navigate(key);
+                });
+                // Back, forward and a typed address show their route
+                window.addEventListener('hashchange', function () {
+                    var p = parseHash(location.hash);
+                    var id = routeId(p.key, p.raw);
+                    if (id === lastRoute) return;
+                    pendingInitial = false;
+                    lastRoute = id;
+                    applyRoute(p.key, p.raw);
+                });
+                // Leaving animated mode shows everything at once and stops the timeline. Switching back later does not replay the landing
+                new MutationObserver(function () {
+                    if (isAnimated()) return;
+                    finishTimeline();
+                    removeCursor();
+                    root.classList.remove('term-live');
+                    settleInitial();
+                }).observe(root, { attributes: true, attributeFilter: ['data-motion'] });
+
+                // The landing types whoami and tree. Its tree lines are the tree, so they show as the tree renders
                 function splitChars(node, spans) {
                     Array.prototype.slice.call(node.childNodes).forEach(function (child) {
                         if (child.nodeType === 3) {
@@ -742,8 +865,7 @@
                     var cmd1 = document.getElementById('term-cmd-1');
                     var cmd2 = document.getElementById('term-cmd-2');
                     var printed = document.getElementById('term-print-1');
-                    var outLines = Array.prototype.slice.call(document.querySelectorAll('#term-output .term-line'));
-                    var promptEnd = document.getElementById('term-prompt-end');
+                    var outLines = Array.prototype.slice.call(output.querySelectorAll('.term-line'));
 
                     // The first prompt, `~$` and the space after it, shows from the start. Only `whoami` types, after the wait
                     var cmd1Spans = splitChars(cmd1, []);
@@ -775,48 +897,10 @@
                     return { actions: actions, navStart: treeIn + NAV_GAP_MS };
                 }
 
-                // Links that name a route get their route and the command they type. The command is `cd` for a folder and `cat` for a file
-                Array.prototype.forEach.call(document.querySelectorAll('a[href^="#/"]'), function (a) {
-                    var p = parseHash(a.getAttribute('href'));
-                    if (p.key === null) return;
-                    a.setAttribute('data-route', p.key);
-                    a.setAttribute('data-cmd', (isFile(p.key) ? 'cat ' : 'cd ') + a.textContent.trim());
-                });
-                Object.keys(FILES).forEach(function (key) { loadFile(key); });
-
-                // A click on a route link types its command. The browser then changes the address to the link's route, which
-                // lastRoute already holds, so the change is not run a second time
-                document.addEventListener('click', function (e) {
-                    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-                    var link = e.target.closest ? e.target.closest('a[data-route]') : null;
-                    if (!link) return;
-                    lastRoute = link.getAttribute('data-route');
-                    queue.push({ click: true, key: lastRoute, cmd: link.getAttribute('data-cmd') });
-                    pump();
-                });
-                // Back, forward and a typed address run their route as a typed command, and are added to the history
-                window.addEventListener('hashchange', function () {
-                    var p = parseHash(location.hash);
-                    var id = p.key !== null ? p.key : '?' + p.raw;
-                    if (id === lastRoute) return;
-                    lastRoute = id;
-                    queue.push({ click: false, key: p.key, raw: p.raw });
-                    pump();
-                });
-                // Leaving animated mode shows everything at once and stops the timeline. Switching back later does not replay the landing
-                new MutationObserver(function () {
-                    if (isAnimated()) return;
-                    finishTimeline();
-                    removeCursor();
-                    root.classList.remove('term-live');
-                    pump();
-                }).observe(root, { attributes: true, attributeFilter: ['data-motion'] });
-
-                // An address that opens the page is run after the landing, so the history stays continuous
-                var initial = parseHash(location.hash);
-                lastRoute = initial.key !== null ? initial.key : '?' + initial.raw;
-                if (initial.key !== '') queue.push({ click: false, key: initial.key, raw: initial.raw });
-
+                // The tree as it starts: the root, with no folder open. Then the landing, or at once in minimal mode
+                setPath('');
+                renderTree(false);
+                lastRoute = routeId(initial.key, initial.raw);
                 if (isAnimated()) {
                     var landing = landingActions();
                     landing.actions.forEach(function (a) {
@@ -827,9 +911,9 @@
                     var first = landing.actions[0].span.getBoundingClientRect();
                     placeCursor(first.left, first.top, first.width, first.height);
                     navbar.style.setProperty('--drop-delay', landing.navStart + 'ms');
-                    startTimeline(landing.actions);
+                    startTimeline(landing.actions, settleInitial);
                 } else {
-                    pump();
+                    settleInitial();
                 }
             }
 
