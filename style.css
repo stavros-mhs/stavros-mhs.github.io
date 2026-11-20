@@ -710,4 +710,11 @@ html.term-live[data-motion="animated"] .term-fade {
     .terminal {
         padding: 1rem;
     }
+
+    /* A terminal line wider than the phone's box wraps at its spaces, rather than running past the box. The tree lines are
+       short, so they do not wrap */
+    .terminal .term-line {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+    }
 }
