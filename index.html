@@ -251,7 +251,12 @@
                     return at + LINE_FADE_MS;
                 }
 
-                var typed1End = typeAt(splitChars(cmd1, []), FADE_MS + AFTER_FADE_MS);
+                // The first prompt, `~$` and the space after it, is shown from the start, so it is there as the terminal fades in.
+                // Only `whoami` types, after the wait
+                var cmd1Spans = splitChars(cmd1, []);
+                var promptChars = cmd1.querySelector('.term-prompt').textContent.length + 1;
+                cmd1Spans.slice(0, promptChars).forEach(function (span) { span.style.opacity = '1'; });
+                var typed1End = typeAt(cmd1Spans.slice(promptChars), FADE_MS + AFTER_FADE_MS);
                 var printedIn = printAt(printed, typed1End + PAUSE_MS);
                 var typed2End = typeAt(splitChars(cmd2, []), printedIn + GAP_MS);
                 var treeStart = typed2End + PAUSE_MS;
