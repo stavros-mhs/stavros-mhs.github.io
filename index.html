@@ -74,16 +74,16 @@
             <div class="landing">
                 <div class="terminal" id="terminal" role="region" aria-label="Terminal">
                     <p class="term-line" id="term-cmd-1"><span class="term-prompt">~$</span> whoami</p>
-                    <p class="term-line term-fade" id="term-print-1">stavros-mhs</p>
+                    <p class="term-line" id="term-print-1">stavros-mhs</p>
                     <p class="term-line" id="term-cmd-2"><span class="term-prompt">~$</span> ls -l</p>
                     <div class="term-output" id="term-output">
-                        <p class="term-line term-fade">~/</p>
-                        <p class="term-line term-fade">├── <a href="#/user/">user/</a></p>
-                        <p class="term-line term-fade">├── <a href="#/projects/">projects/</a></p>
-                        <p class="term-line term-fade">├── <a href="#/skills/">skills/</a></p>
-                        <p class="term-line term-fade">└── <a href="#/contact/">contact/</a></p>
-                        <p class="term-line term-fade term-blank"></p>
-                        <p class="term-line term-fade">4 directories</p>
+                        <p class="term-line">~/</p>
+                        <p class="term-line">├── <a href="#/user/">user/</a></p>
+                        <p class="term-line">├── <a href="#/projects/">projects/</a></p>
+                        <p class="term-line">├── <a href="#/skills/">skills/</a></p>
+                        <p class="term-line">└── <a href="#/contact/">contact/</a></p>
+                        <p class="term-line term-blank"></p>
+                        <p class="term-line">4 directories</p>
                     </div>
                     <p class="term-line" id="term-prompt-end"><span class="term-prompt">~$</span> </p>
                 </div>
@@ -195,12 +195,9 @@
                 // Times in ms. The fade (750 ms, cubic-bezier(0.08, 0.52, 0.52, 1)) and the navbar's drop (500 ms, ease-out) are in the CSS
                 var FADE_MS = 750;        // the terminal fades in
                 var AFTER_FADE_MS = 400;  // after the fade, before the first command
-                var PAUSE_MS = 300;       // after a command, before the output it produces
-                var GAP_MS = 400;         // after a printed line has faded in, before the next command
+                var PAUSE_MS = 300;       // after a command, before its output and the next prompt appear
                 var PROMPT_PAUSE_MS = 300; // after the second prompt appears, before `ls -l` starts to type
-                var LINE_MS = 120;        // the output pace: each line starts this long after the line above
-                var LINE_FADE_MS = 250;   // each printed line fades in over this long
-                var NAV_GAP_MS = 400;     // after the last output line has faded in, before the navbar drops
+                var NAV_GAP_MS = 400;     // after the last output has appeared, before the navbar drops
                 var TYPE_MIN_MS = 90;     // a typed character follows the one before after a random interval in this range
                 var TYPE_MAX_MS = 170;
 
@@ -246,10 +243,9 @@
                     });
                     return at;
                 }
-                // Returns the time the line has faded in
-                function printAt(line, at) {
+                // Output appears at once: the line shows at its time, with no fade
+                function lineAt(line, at) {
                     events.push({ line: line, at: at });
-                    return at + LINE_FADE_MS;
                 }
 
                 // The first prompt, `~$` and the space after it, is shown from the start, so it is there as the terminal fades in.
@@ -258,21 +254,19 @@
                 var promptChars = cmd1.querySelector('.term-prompt').textContent.length + 1;
                 cmd1Spans.slice(0, promptChars).forEach(function (span) { span.style.opacity = '1'; });
                 var typed1End = typeAt(cmd1Spans.slice(promptChars), FADE_MS + AFTER_FADE_MS);
-                var printedIn = printAt(printed, typed1End + PAUSE_MS);
-                // The second prompt appears at once, as a terminal shows one, and then `ls -l` types after it
-                var cmd2Start = printedIn + GAP_MS;
+                // The output of `whoami` appears at once, together with the second prompt, as a terminal shows them
+                var outputAt = typed1End + PAUSE_MS;
+                lineAt(printed, outputAt);
                 var cmd2Spans = splitChars(cmd2, []);
                 var promptChars2 = cmd2.querySelector('.term-prompt').textContent.length + 1;
-                cmd2Spans.slice(0, promptChars2).forEach(function (span) { events.push({ span: span, at: cmd2Start }); });
-                var typed2End = typeAt(cmd2Spans.slice(promptChars2), cmd2Start + PROMPT_PAUSE_MS);
-                var treeStart = typed2End + PAUSE_MS;
-                var lastLineIn = treeStart;
-                outLines.forEach(function (line, i) {
-                    lastLineIn = printAt(line, treeStart + i * LINE_MS);
-                });
-                // The new prompt appears at once, once the output has faded in. It has no fade, as a terminal's prompt does not
-                events.push({ line: promptEnd, at: lastLineIn });
-                var navStart = lastLineIn + NAV_GAP_MS;
+                cmd2Spans.slice(0, promptChars2).forEach(function (span) { events.push({ span: span, at: outputAt }); });
+                // `ls -l` types after the second prompt, after a short pause
+                var typed2End = typeAt(cmd2Spans.slice(promptChars2), outputAt + PROMPT_PAUSE_MS);
+                // The output of `ls -l` appears at once, together with the final prompt
+                var treeAt = typed2End + PAUSE_MS;
+                outLines.forEach(function (line) { lineAt(line, treeAt); });
+                lineAt(promptEnd, treeAt);
+                var navStart = treeAt + NAV_GAP_MS;
 
                 // The cursor: a block the height of the text, in the body text colour. It sits at the end of the text being typed or
                 // printed. The script moves it with transform, so its blink is not restarted
@@ -346,7 +340,7 @@
             try {
                 runTerminal();
             } catch (e) {
-                document.querySelectorAll('#terminal .term-char, #terminal .term-fade').forEach(function (el) { el.style.opacity = '1'; });
+                document.querySelectorAll('#terminal .term-char, #terminal .term-line').forEach(function (el) { el.style.opacity = '1'; });
                 document.documentElement.classList.add('term-failed');
             }
         </script>
