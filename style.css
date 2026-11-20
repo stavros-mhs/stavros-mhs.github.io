@@ -19,6 +19,8 @@
     --link-hover: #f5b06e;
     --rule: #3a3a3a;
     --focus: #e8954d;
+    --dir: #d8b78e;
+    --dir-hover: #f5b06e;
 }
 
 body {
@@ -45,6 +47,8 @@ body {
     --link-hover: #8a3c12;
     --rule: #d7c9ad;
     --focus: #805832;
+    --dir: #407ca8;
+    --dir-hover: #2f5d7c;
 }
 
 /* Visually hidden checkbox: it stays in the tab order, so keyboard users can reach the toggle */
@@ -249,7 +253,7 @@ input[type=checkbox]:checked + .display label .circle .moon {
 }
 
 .nav-container a {
-    color: var(--link);
+    color: var(--dir);
     text-decoration: none;
     font-size: 1.5rem;
     font-weight: 500;
@@ -257,13 +261,19 @@ input[type=checkbox]:checked + .display label .circle .moon {
 }
 
 .nav-container a:visited {
-    color: var(--link);
+    color: var(--dir);
 }
 
-/* Hover effects sit in this query, so a touch device does not keep a hover state after a tap */
+.nav-container a:active {
+    color: var(--dir-hover);
+}
+
+/* Hover effects sit in this query, so a touch device does not keep a hover state after a tap. Directory names use --dir-hover */
 @media (hover: hover) {
-    .nav-container a:hover {
-        color: var(--link-hover);
+    .nav-container a:hover,
+    .terminal a:hover,
+    .ls-panel a:hover {
+        color: var(--dir-hover);
     }
 }
 
@@ -510,6 +520,14 @@ html.term-live[data-motion="animated"] .term-fade {
     50% {
         opacity: 0;
     }
+}
+
+/* Directory names in the terminal's tree and in the phone panel use --dir, as the navbar names do */
+.terminal a,
+.ls-panel a,
+.terminal a:visited,
+.ls-panel a:visited {
+    color: var(--dir);
 }
 
 /* Mobile responsive */
