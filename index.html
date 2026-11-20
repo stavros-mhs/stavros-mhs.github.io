@@ -185,7 +185,7 @@
 
         <script>
             // Landing terminal. Animated mode only. It types whoami and tree at human speed. The tree's lines fade in at the
-            // output pace, and a new prompt follows the output. A blinking cursor marks the end of the text being typed or printed.
+            // output pace, and the final prompt fades in as the output starts. A blinking cursor marks the end of the text being typed or printed.
             // Then the navbar drops in. The times are in ms from the start, and the constants below set them. Without JavaScript,
             // and in minimal mode, the text shows as it stands. The styles are in style.css
             function runTerminal() {
@@ -245,9 +245,10 @@
                     });
                     return at;
                 }
-                // Output appears at once: the line shows at its time, with no fade
-                function lineAt(line, at) {
-                    events.push({ line: line, at: at });
+                // A line shows at its time, and the cursor moves to its end unless moveCursor is false. A line with the term-fade
+                // class fades in over its CSS transition
+                function lineAt(line, at, moveCursor) {
+                    events.push({ line: line, at: at, moveCursor: moveCursor !== false });
                 }
 
                 // The first prompt, `~$` and the space after it, is shown from the start, so it is there as the terminal fades in.
@@ -264,19 +265,20 @@
                 cmd2Spans.slice(0, promptChars2).forEach(function (span) { events.push({ span: span, at: outputAt }); });
                 // `tree` types after the second prompt, after a short pause
                 var typed2End = typeAt(cmd2Spans.slice(promptChars2), outputAt + PROMPT_PAUSE_MS);
-                // The tree fades in line by line, each line LINE_MS after the one above. The final prompt appears as the last line
-                // starts to fade in, so it is already shown while the tree finishes fading in. The navbar drops NAV_GAP_MS after
-                // the tree has faded in
+                // The tree fades in line by line, each line LINE_MS after the one above. The final prompt fades in as the tree
+                // starts, and the cursor moves to it once the tree has faded in. The navbar drops NAV_GAP_MS after that
                 var treeAt = typed2End + PAUSE_MS;
                 var treeIn = treeAt;
-                var lastLineAt = treeAt;
                 outLines.forEach(function (line, i) {
                     line.classList.add('term-fade');
                     lineAt(line, treeAt + i * LINE_MS);
-                    lastLineAt = treeAt + i * LINE_MS;
-                    treeIn = lastLineAt + LINE_FADE_MS;
+                    treeIn = treeAt + i * LINE_MS + LINE_FADE_MS;
                 });
-                lineAt(promptEnd, lastLineAt);
+                // The final prompt fades in with the tree's first line, and the cursor stays on the output. Once the tree has
+                // faded in, the cursor moves to the prompt. The prompt is already shown then, so that event only moves the cursor
+                promptEnd.classList.add('term-fade');
+                lineAt(promptEnd, treeAt, false);
+                lineAt(promptEnd, treeIn);
                 var navStart = treeIn + NAV_GAP_MS;
 
                 // The cursor: a block the height of the text, in the body text colour. It sits at the end of the text being typed or
@@ -332,7 +334,7 @@
                             cursorAfterChar(event.span);
                         } else {
                             event.line.style.opacity = '1';
-                            cursorAtLineEnd(event.line);
+                            if (event.moveCursor) cursorAtLineEnd(event.line);
                         }
                     }, Math.max(0, event.at - (performance.now() - t0))));
                 });
