@@ -197,6 +197,7 @@
                 var AFTER_FADE_MS = 400;  // after the fade, before the first command
                 var PAUSE_MS = 300;       // after a command, before the output it produces
                 var GAP_MS = 400;         // after a printed line has faded in, before the next command
+                var PROMPT_PAUSE_MS = 300; // after the second prompt appears, before `ls -l` starts to type
                 var LINE_MS = 120;        // the output pace: each line starts this long after the line above
                 var LINE_FADE_MS = 250;   // each printed line fades in over this long
                 var NAV_GAP_MS = 400;     // after the last output line has faded in, before the navbar drops
@@ -263,7 +264,7 @@
                 var cmd2Spans = splitChars(cmd2, []);
                 var promptChars2 = cmd2.querySelector('.term-prompt').textContent.length + 1;
                 cmd2Spans.slice(0, promptChars2).forEach(function (span) { events.push({ span: span, at: cmd2Start }); });
-                var typed2End = typeAt(cmd2Spans.slice(promptChars2), cmd2Start);
+                var typed2End = typeAt(cmd2Spans.slice(promptChars2), cmd2Start + PROMPT_PAUSE_MS);
                 var treeStart = typed2End + PAUSE_MS;
                 var lastLineIn = treeStart;
                 outLines.forEach(function (line, i) {
