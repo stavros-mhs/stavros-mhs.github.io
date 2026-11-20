@@ -604,6 +604,39 @@ html.term-live[data-motion="animated"] .term-fade {
     justify-content: flex-start;
 }
 
+/* The stage holds the terminal's box. It fades as a whole (the .term-fade rule above), and a file page moves it with a transform
+   (.term-move, animated mode only) */
+.term-stage {
+    width: 100%;
+    max-width: 760px;
+}
+
+html.term-live[data-motion="animated"] .term-move {
+    transition: transform 0.4s ease-out;
+}
+
+/* The footer ends a file's markdown: a link to the folder that holds the file, at the end of the column. It uses the directory
+   colour, and on hover the directory's hover colour */
+.page-footer {
+    margin: 1.5rem 0 0;
+    text-align: right;
+}
+
+.page-footer a,
+.page-footer a:visited {
+    color: var(--dir);
+}
+
+.page-footer a:active {
+    color: var(--dir-hover);
+}
+
+@media (hover: hover) {
+    .page-footer a:hover {
+        color: var(--dir-hover);
+    }
+}
+
 /* The rendered markdown of a file, printed below the terminal. It is page text, so it takes the page's colours */
 .page-content {
     width: 100%;
