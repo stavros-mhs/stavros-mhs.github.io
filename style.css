@@ -19,7 +19,7 @@
     --link-hover: #f5b06e;
     --rule: #3a3a3a;
     --focus: #e8954d;
-    --dir: #d8b78e;
+    --dir: #e8954d;
     --dir-hover: #f5b06e;
 }
 
@@ -47,8 +47,8 @@ body {
     --link-hover: #8a3c12;
     --rule: #d7c9ad;
     --focus: #805832;
-    --dir: #407ca8;
-    --dir-hover: #2f5d7c;
+    --dir: #b5602e;
+    --dir-hover: #8f4a1f;
 }
 
 /* Visually hidden checkbox: it stays in the tab order, so keyboard users can reach the toggle */
