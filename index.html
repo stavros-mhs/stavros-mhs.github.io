@@ -264,16 +264,19 @@
                 cmd2Spans.slice(0, promptChars2).forEach(function (span) { events.push({ span: span, at: outputAt }); });
                 // `tree` types after the second prompt, after a short pause
                 var typed2End = typeAt(cmd2Spans.slice(promptChars2), outputAt + PROMPT_PAUSE_MS);
-                // The tree fades in line by line, each line LINE_MS after the one above. The final prompt appears once the tree
-                // has faded in, and the navbar drops NAV_GAP_MS after that
+                // The tree fades in line by line, each line LINE_MS after the one above. The final prompt appears as the last line
+                // starts to fade in, so it is already shown while the tree finishes fading in. The navbar drops NAV_GAP_MS after
+                // the tree has faded in
                 var treeAt = typed2End + PAUSE_MS;
                 var treeIn = treeAt;
+                var lastLineAt = treeAt;
                 outLines.forEach(function (line, i) {
                     line.classList.add('term-fade');
                     lineAt(line, treeAt + i * LINE_MS);
-                    treeIn = treeAt + i * LINE_MS + LINE_FADE_MS;
+                    lastLineAt = treeAt + i * LINE_MS;
+                    treeIn = lastLineAt + LINE_FADE_MS;
                 });
-                lineAt(promptEnd, treeIn);
+                lineAt(promptEnd, lastLineAt);
                 var navStart = treeIn + NAV_GAP_MS;
 
                 // The cursor: a block the height of the text, in the body text colour. It sits at the end of the text being typed or
