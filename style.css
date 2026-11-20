@@ -404,7 +404,7 @@ footer {
 
 /* The landing: the terminal sits in the centre of the viewport. The box is at least the viewport tall, and its 72px padding
    keeps the terminal clear of the navbar's height. On desktop the box starts at the top of the viewport (see below). The mobile
-   block changes the height */
+   block changes the height. Folder and file pages start the terminal at the top instead (.is-top, below) */
 .landing {
     box-sizing: border-box;
     min-height: 100vh;
@@ -550,7 +550,8 @@ html.term-live[data-motion="animated"] .term-fade {
     overflow-wrap: anywhere;
 }
 
-/* Subpage blocks: the text of a .md file. They wrap, unlike the tree lines, and take the terminal's text colour */
+/* Markdown blocks: the text of a .md file. They wrap, unlike the tree lines. In the terminal they take its text colour, and on a
+   file page, below the terminal, they take the page's */
 .term-block {
     margin: 0 0 0.75em;
     white-space: normal;
