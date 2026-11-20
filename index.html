@@ -85,7 +85,7 @@
                         <p class="term-line term-fade term-blank"></p>
                         <p class="term-line term-fade">4 directories</p>
                     </div>
-                    <p class="term-line term-fade" id="term-prompt-end"><span class="term-prompt">~$</span> </p>
+                    <p class="term-line" id="term-prompt-end"><span class="term-prompt">~$</span> </p>
                 </div>
             </div>
         </main>
@@ -258,13 +258,19 @@
                 cmd1Spans.slice(0, promptChars).forEach(function (span) { span.style.opacity = '1'; });
                 var typed1End = typeAt(cmd1Spans.slice(promptChars), FADE_MS + AFTER_FADE_MS);
                 var printedIn = printAt(printed, typed1End + PAUSE_MS);
-                var typed2End = typeAt(splitChars(cmd2, []), printedIn + GAP_MS);
+                // The second prompt appears at once, as a terminal shows one, and then `ls -l` types after it
+                var cmd2Start = printedIn + GAP_MS;
+                var cmd2Spans = splitChars(cmd2, []);
+                var promptChars2 = cmd2.querySelector('.term-prompt').textContent.length + 1;
+                cmd2Spans.slice(0, promptChars2).forEach(function (span) { events.push({ span: span, at: cmd2Start }); });
+                var typed2End = typeAt(cmd2Spans.slice(promptChars2), cmd2Start);
                 var treeStart = typed2End + PAUSE_MS;
                 var lastLineIn = treeStart;
                 outLines.forEach(function (line, i) {
                     lastLineIn = printAt(line, treeStart + i * LINE_MS);
                 });
-                printAt(promptEnd, lastLineIn);      // the new prompt follows the output, once the output has faded in
+                // The new prompt appears at once, once the output has faded in. It has no fade, as a terminal's prompt does not
+                events.push({ line: promptEnd, at: lastLineIn });
                 var navStart = lastLineIn + NAV_GAP_MS;
 
                 // The cursor: a block the height of the text, in the body text colour. It sits at the end of the text being typed or
