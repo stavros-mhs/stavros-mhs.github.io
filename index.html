@@ -75,7 +75,7 @@
                 <div class="terminal" id="terminal" role="region" aria-label="Terminal">
                     <p class="term-line" id="term-cmd-1"><span class="term-prompt">~$</span> whoami</p>
                     <p class="term-line" id="term-print-1">stavros-mhs</p>
-                    <p class="term-line" id="term-cmd-2"><span class="term-prompt">~$</span> ls -l</p>
+                    <p class="term-line" id="term-cmd-2"><span class="term-prompt">~$</span> tree</p>
                     <div class="term-output" id="term-output">
                         <p class="term-line">~/</p>
                         <p class="term-line">├── <a href="#/user/">user/</a></p>
@@ -184,7 +184,7 @@
         </script>
 
         <script>
-            // Landing terminal. Animated mode only. It types whoami and ls -l at human speed. The printed lines fade in at the
+            // Landing terminal. Animated mode only. It types whoami and tree at human speed. The tree's lines fade in at the
             // output pace, and a new prompt follows the output. A blinking cursor marks the end of the text being typed or printed.
             // Then the navbar drops in. The times are in ms from the start, and the constants below set them. Without JavaScript,
             // and in minimal mode, the text shows as it stands. The styles are in style.css
@@ -196,8 +196,10 @@
                 var FADE_MS = 750;        // the terminal fades in
                 var AFTER_FADE_MS = 400;  // after the fade, before the first command
                 var PAUSE_MS = 300;       // after a command, before its output and the next prompt appear
-                var PROMPT_PAUSE_MS = 300; // after the second prompt appears, before `ls -l` starts to type
-                var NAV_GAP_MS = 400;     // after the last output has appeared, before the navbar drops
+                var PROMPT_PAUSE_MS = 300; // after the second prompt appears, before `tree` starts to type
+                var LINE_MS = 120;        // the output pace: each tree line starts this long after the line above
+                var LINE_FADE_MS = 250;   // each tree line fades in over this long
+                var NAV_GAP_MS = 400;     // after the last tree line has faded in, before the navbar drops
                 var TYPE_MIN_MS = 90;     // a typed character follows the one before after a random interval in this range
                 var TYPE_MAX_MS = 170;
 
@@ -260,13 +262,19 @@
                 var cmd2Spans = splitChars(cmd2, []);
                 var promptChars2 = cmd2.querySelector('.term-prompt').textContent.length + 1;
                 cmd2Spans.slice(0, promptChars2).forEach(function (span) { events.push({ span: span, at: outputAt }); });
-                // `ls -l` types after the second prompt, after a short pause
+                // `tree` types after the second prompt, after a short pause
                 var typed2End = typeAt(cmd2Spans.slice(promptChars2), outputAt + PROMPT_PAUSE_MS);
-                // The output of `ls -l` appears at once, together with the final prompt
+                // The tree fades in line by line, each line LINE_MS after the one above. The final prompt appears once the tree
+                // has faded in, and the navbar drops NAV_GAP_MS after that
                 var treeAt = typed2End + PAUSE_MS;
-                outLines.forEach(function (line) { lineAt(line, treeAt); });
-                lineAt(promptEnd, treeAt);
-                var navStart = treeAt + NAV_GAP_MS;
+                var treeIn = treeAt;
+                outLines.forEach(function (line, i) {
+                    line.classList.add('term-fade');
+                    lineAt(line, treeAt + i * LINE_MS);
+                    treeIn = treeAt + i * LINE_MS + LINE_FADE_MS;
+                });
+                lineAt(promptEnd, treeIn);
+                var navStart = treeIn + NAV_GAP_MS;
 
                 // The cursor: a block the height of the text, in the body text colour. It sits at the end of the text being typed or
                 // printed. The script moves it with transform, so its blink is not restarted

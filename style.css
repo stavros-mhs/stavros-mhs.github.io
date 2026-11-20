@@ -474,6 +474,11 @@ html.term-live[data-motion="animated"] .navbar {
     animation: nav-drop 0.5s ease-out var(--drop-delay, 0ms) both;
 }
 
+/* A tree line fades in over 250 ms. Only the opacity changes. The script sets each line's opacity */
+html.term-live[data-motion="animated"] .term-fade {
+    transition: opacity 0.25s ease-out;
+}
+
 /* The blinking cursor: a block the height of the text, in the body text colour. It blinks on a steady 1-second cycle, on for
    500 ms and off for 500 ms. The script moves it with transform. Only the opacity animates, and step-end switches it sharply */
 .term-cursor {
