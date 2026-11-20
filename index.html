@@ -88,6 +88,28 @@
                     <p class="term-line" id="term-prompt-end"><span class="term-prompt">~$</span> </p>
                 </div>
             </div>
+            <noscript>
+                <div class="terminal term-noscript" role="region" aria-label="Terminal, without JavaScript">
+                    <p class="term-line"><span class="term-prompt">~$</span> tree</p>
+                    <p class="term-line">~/</p>
+                    <p class="term-line">├── user/</p>
+                    <p class="term-line">│   ├── <a href="user/HOBBIES.md">HOBBIES.md</a></p>
+                    <p class="term-line">│   └── <a href="user/WHOAMI.md">WHOAMI.md</a></p>
+                    <p class="term-line">├── projects/</p>
+                    <p class="term-line">│   ├── aralloc/</p>
+                    <p class="term-line">│   │   ├── <a href="projects/aralloc/BRIEF.md">BRIEF.md</a></p>
+                    <p class="term-line">│   │   └── <a class="term-repo" href="https://github.com/stavros-mhs/aralloc" target="_blank" rel="noopener">source/</a></p>
+                    <p class="term-line">│   └── ginny/</p>
+                    <p class="term-line">│       ├── <a href="projects/ginny/BRIEF.md">BRIEF.md</a></p>
+                    <p class="term-line">│       └── <a class="term-repo" href="https://github.com/stavros-mhs/Ginny" target="_blank" rel="noopener">source/</a></p>
+                    <p class="term-line">├── skills/</p>
+                    <p class="term-line">│   └── <a href="skills/SKILLS.md">SKILLS.md</a></p>
+                    <p class="term-line">└── contact/</p>
+                    <p class="term-line">    └── <a href="contact/INFO.md">INFO.md</a></p>
+                    <p class="term-line term-blank"></p>
+                    <p class="term-line">8 directories, 6 files</p>
+                </div>
+            </noscript>
         </main>
 
         <footer>
@@ -184,111 +206,288 @@
         </script>
 
         <script>
-            // Landing terminal. Animated mode only. It types whoami and tree at human speed. The tree's lines fade in at the
-            // output pace, and the final prompt fades in as the output starts. A blinking cursor marks the end of the text being typed or printed.
-            // Then the navbar drops in. The times are in ms from the start, and the constants below set them. Without JavaScript,
-            // and in minimal mode, the text shows as it stands. The styles are in style.css
-            function runTerminal() {
+            // The landing terminal, and the navigation after it. In animated mode the landing types whoami and tree at human speed.
+            // Then the terminal takes commands from the links (a folder or a file, the navbar and cd ..) and from the address after #,
+            // which covers back, forward and a typed address. A command types into the current prompt, prints its output, and then
+            // shows a new prompt with the cursor after it. Minimal mode shows each command at once. Without JavaScript the landing
+            // stays as it is, and the noscript tree shows. The times are in ms from the start, and the constants below set them.
+            // The styles are in style.css
+            function startTerminal() {
                 var root = document.documentElement;
-                if (root.getAttribute('data-motion') !== 'animated') return;
-
-                // Times in ms. The fade (750 ms, cubic-bezier(0.08, 0.52, 0.52, 1)) and the navbar's drop (500 ms, ease-out) are in the CSS
-                var FADE_MS = 750;        // the terminal fades in
-                var AFTER_FADE_MS = 400;  // after the fade, before the first command
-                var PAUSE_MS = 300;       // after a command, before its output and the next prompt appear
-                var PROMPT_PAUSE_MS = 300; // after the second prompt appears, before `tree` starts to type
-                var LINE_MS = 120;        // the output pace: each tree line starts this long after the line above
-                var LINE_FADE_MS = 250;   // each tree line fades in over this long
-                var NAV_GAP_MS = 400;     // after the last tree line has faded in, before the navbar drops
-                var TYPE_MIN_MS = 90;     // a typed character follows the one before after a random interval in this range
-                var TYPE_MAX_MS = 170;
-
                 var terminal = document.getElementById('terminal');
                 var navbar = document.querySelector('.navbar');
-                var cmd1 = document.getElementById('term-cmd-1');
-                var cmd2 = document.getElementById('term-cmd-2');
-                var printed = document.getElementById('term-print-1');
-                var outLines = Array.prototype.slice.call(document.querySelectorAll('#term-output .term-line'));
-                var promptEnd = document.getElementById('term-prompt-end');
-                var lines = [printed].concat(outLines, [promptEnd]);
 
-                // Wraps each character of a node's text in its own span, which starts hidden. The structure stays, so the prompt
-                // keeps its colour. The spans are added to the list in page order
-                function splitChars(node, spans) {
-                    Array.prototype.slice.call(node.childNodes).forEach(function (child) {
-                        if (child.nodeType === 3) {
-                            var fragment = document.createDocumentFragment();
-                            Array.prototype.forEach.call(child.textContent, function (ch) {
-                                var span = document.createElement('span');
-                                span.className = 'term-char';
-                                span.textContent = ch;
-                                span.style.opacity = '0';
-                                fragment.appendChild(span);
-                                spans.push(span);
-                            });
-                            node.replaceChild(fragment, child);
-                        } else if (child.nodeType === 1) {
-                            splitChars(child, spans);
+                // Times in ms. The fade (750 ms, cubic-bezier(0.08, 0.52, 0.52, 1)) and the navbar's drop (500 ms, ease-out) are in the CSS
+                var FADE_MS = 750;         // the landing's terminal fades in
+                var AFTER_FADE_MS = 400;   // after the fade, before the first command
+                var PAUSE_MS = 300;        // after a command is typed, before its output appears. Also between commands
+                var PROMPT_PAUSE_MS = 300; // after the second prompt appears, before `tree` starts to type
+                var LINE_MS = 120;         // the output pace: each line or block starts this long after the one above
+                var LINE_FADE_MS = 250;    // each line or block fades in over this long
+                var NAV_GAP_MS = 400;      // after the tree has faded in, before the navbar drops
+                var TYPE_MIN_MS = 90;      // a typed character follows the one before after a random interval in this range
+                var TYPE_MAX_MS = 170;
+
+                // The routes. A folder's route is its path, and the root's is empty. A file's route is its path in the repository.
+                // The address after # is the route, with a leading / and, for a folder, a trailing /
+                var REPO = {
+                    aralloc: 'https://github.com/stavros-mhs/aralloc',
+                    ginny: 'https://github.com/stavros-mhs/Ginny'
+                };
+                // Each folder's listing: its header, its rows and its count line. A row is [prefix, name, target], where the target is a
+                // route, or the repository's URL for a source/ entry. The blank line before the count, and the cd .. line, are added
+                var LISTINGS = {
+                    '': { header: '~/', count: '4 directories', rows: [
+                        ['├── ', 'user/', 'user'],
+                        ['├── ', 'projects/', 'projects'],
+                        ['├── ', 'skills/', 'skills'],
+                        ['└── ', 'contact/', 'contact']
+                    ] },
+                    'user': { header: 'user/', count: '0 directories, 2 files', rows: [
+                        ['├── ', 'HOBBIES.md', 'user/HOBBIES.md'],
+                        ['└── ', 'WHOAMI.md', 'user/WHOAMI.md']
+                    ] },
+                    'projects': { header: 'projects/', count: '2 directories', rows: [
+                        ['├── ', 'aralloc/', 'projects/aralloc'],
+                        ['└── ', 'ginny/', 'projects/ginny']
+                    ] },
+                    'projects/aralloc': { header: 'projects/aralloc/', count: '1 directory, 1 file', rows: [
+                        ['├── ', 'BRIEF.md', 'projects/aralloc/BRIEF.md'],
+                        ['└── ', 'source/', REPO.aralloc]
+                    ] },
+                    'projects/ginny': { header: 'projects/ginny/', count: '1 directory, 1 file', rows: [
+                        ['├── ', 'BRIEF.md', 'projects/ginny/BRIEF.md'],
+                        ['└── ', 'source/', REPO.ginny]
+                    ] },
+                    'skills': { header: 'skills/', count: '0 directories, 1 file', rows: [
+                        ['└── ', 'SKILLS.md', 'skills/SKILLS.md']
+                    ] },
+                    'contact': { header: 'contact/', count: '0 directories, 1 file', rows: [
+                        ['└── ', 'INFO.md', 'contact/INFO.md']
+                    ] }
+                };
+                var FILES = {
+                    'user/HOBBIES.md': true,
+                    'user/WHOAMI.md': true,
+                    'projects/aralloc/BRIEF.md': true,
+                    'projects/ginny/BRIEF.md': true,
+                    'skills/SKILLS.md': true,
+                    'contact/INFO.md': true
+                };
+
+                function has(map, key) { return Object.prototype.hasOwnProperty.call(map, key); }
+                function isFolder(key) { return has(LISTINGS, key); }
+                function isFile(key) { return has(FILES, key); }
+                function folderOf(key) { return isFile(key) ? key.slice(0, key.lastIndexOf('/')) : key; }
+                function parentOf(folder) { var i = folder.lastIndexOf('/'); return i === -1 ? '' : folder.slice(0, i); }
+                function nameOf(key) { return key.slice(key.lastIndexOf('/') + 1); }
+                // True when `folder` is the target itself or one of its ancestors
+                function contains(folder, target) {
+                    return folder === '' || target === folder || target.indexOf(folder + '/') === 0;
+                }
+                // The folder one step below `folder` on the way to `target`
+                function childToward(folder, target) {
+                    var rest = folder === '' ? target : target.slice(folder.length + 1);
+                    var seg = rest.split('/')[0];
+                    return folder === '' ? seg : folder + '/' + seg;
+                }
+                function hashFor(key) { return key === '' ? '#/' : isFile(key) ? '#/' + key : '#/' + key + '/'; }
+                function promptText(folder) { return folder === '' ? '~$' : '~/' + folder + '$'; }
+                // The route in an address after #. The key is null for a path that is not a route, and raw is the path as typed
+                function parseHash(hash) {
+                    var raw = hash.replace(/^#\/?/, '');
+                    try { raw = decodeURIComponent(raw); } catch (e) {}
+                    var key = raw.replace(/\/$/, '');
+                    return { key: (isFolder(key) || isFile(key)) ? key : null, raw: raw };
+                }
+
+                // Nodes are built with the DOM and textContent, never from HTML strings
+                function el(tag, cls, text) {
+                    var node = document.createElement(tag);
+                    if (cls) node.className = cls;
+                    if (text !== undefined) node.textContent = text;
+                    return node;
+                }
+                function lineEl(text, cls) { return el('p', cls ? 'term-line ' + cls : 'term-line', text); }
+                // A link to a route. Its data says which route it goes to and which command it types
+                function routeLink(key, label, cmd) {
+                    var a = el('a', null, label);
+                    a.setAttribute('href', hashFor(key));
+                    a.setAttribute('data-route', key);
+                    a.setAttribute('data-cmd', cmd);
+                    return a;
+                }
+                function upLine(folder) {
+                    var p = lineEl('');
+                    p.appendChild(routeLink(folder, 'cd ..', 'cd ..'));
+                    return p;
+                }
+                function promptLine(folder) {
+                    var p = lineEl('');
+                    p.appendChild(el('span', 'term-prompt', promptText(folder)));
+                    p.appendChild(document.createTextNode(' '));
+                    return p;
+                }
+                function listingLines(folder) {
+                    var listing = LISTINGS[folder];
+                    var lines = [lineEl(listing.header)];
+                    listing.rows.forEach(function (row) {
+                        var p = lineEl(row[0]);
+                        if (/^https:\/\//.test(row[2])) {
+                            var repo = el('a', 'term-repo', row[1]);
+                            repo.setAttribute('href', row[2]);
+                            repo.setAttribute('target', '_blank');
+                            repo.setAttribute('rel', 'noopener');
+                            p.appendChild(repo);
+                        } else {
+                            p.appendChild(routeLink(row[2], row[1], (isFile(row[2]) ? 'cat ' : 'cd ') + row[1]));
                         }
+                        lines.push(p);
                     });
-                    return spans;
+                    lines.push(lineEl('', 'term-blank'));
+                    lines.push(lineEl(listing.count));
+                    if (folder !== '') lines.push(upLine(parentOf(folder)));
+                    return lines;
                 }
 
-                // The schedule. Each event shows one character or one printed line at its time. A typed character follows the one
-                // before after a random interval. The first character of a command shows at the command's start
-                var events = [];
-                function typeAt(spans, start) {
-                    var at = start;
-                    spans.forEach(function (span, i) {
-                        if (i > 0) at += TYPE_MIN_MS + Math.random() * (TYPE_MAX_MS - TYPE_MIN_MS);
-                        events.push({ span: span, at: at });
+                // The markdown the files use: headings, paragraphs, lists and fenced code, and inside them links, bold and `code`
+                function markdownBlocks(text) {
+                    var lines = text.replace(/\r\n?/g, '\n').split('\n');
+                    var blocks = [];
+                    var i = 0;
+                    while (i < lines.length) {
+                        var line = lines[i];
+                        if (/^\s*$/.test(line)) { i++; continue; }
+                        if (/^```/.test(line)) {
+                            var code = [];
+                            i++;
+                            while (i < lines.length && !/^```/.test(lines[i])) { code.push(lines[i]); i++; }
+                            i++;
+                            blocks.push({ type: 'code', text: code.join('\n') });
+                            continue;
+                        }
+                        var heading = line.match(/^#{1,6}\s+(.*)$/);
+                        if (heading) {
+                            blocks.push({ type: 'heading', text: heading[1] });
+                            i++;
+                            continue;
+                        }
+                        if (/^\s*[-*]\s+/.test(line)) {
+                            var items = [];
+                            while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])) {
+                                items.push(lines[i].replace(/^\s*[-*]\s+/, ''));
+                                i++;
+                            }
+                            blocks.push({ type: 'list', items: items });
+                            continue;
+                        }
+                        var para = [];
+                        while (i < lines.length && !/^\s*$/.test(lines[i]) && !/^(#{1,6}\s|```|\s*[-*]\s+)/.test(lines[i])) {
+                            para.push(lines[i].trim());
+                            i++;
+                        }
+                        blocks.push({ type: 'para', text: para.join(' ') });
+                    }
+                    return blocks;
+                }
+                // A link's address, resolved from the file's place in the site. Only web and mail addresses are kept
+                function linkTarget(href, key) {
+                    try {
+                        var url = new URL(href, new URL(key, document.baseURI));
+                        if (url.protocol === 'http:' || url.protocol === 'https:' || url.protocol === 'mailto:') return url.href;
+                    } catch (e) {}
+                    return null;
+                }
+                function inlineInto(parent, text, key) {
+                    var pattern = /\*\*([^*]+)\*\*|`([^`]+)`|\[([^\]]+)\]\(([^)\s]+)\)/g;
+                    var last = 0;
+                    var m;
+                    while ((m = pattern.exec(text)) !== null) {
+                        if (m.index > last) parent.appendChild(document.createTextNode(text.slice(last, m.index)));
+                        if (m[1] !== undefined) {
+                            parent.appendChild(el('strong', null, m[1]));
+                        } else if (m[2] !== undefined) {
+                            parent.appendChild(el('code', null, m[2]));
+                        } else {
+                            var href = linkTarget(m[4], key);
+                            if (href) {
+                                var a = el('a', null, m[3]);
+                                a.setAttribute('href', href);
+                                if (/^https?:/.test(href)) {
+                                    a.setAttribute('target', '_blank');
+                                    a.setAttribute('rel', 'noopener');
+                                }
+                                parent.appendChild(a);
+                            } else {
+                                parent.appendChild(document.createTextNode(m[3]));
+                            }
+                        }
+                        last = pattern.lastIndex;
+                    }
+                    if (last < text.length) parent.appendChild(document.createTextNode(text.slice(last)));
+                }
+                function fileLines(key, text) {
+                    return markdownBlocks(text).map(function (b) {
+                        var node;
+                        if (b.type === 'heading') {
+                            node = el('h2', 'term-block term-heading');
+                            inlineInto(node, b.text, key);
+                        } else if (b.type === 'para') {
+                            node = el('p', 'term-block');
+                            inlineInto(node, b.text, key);
+                        } else if (b.type === 'list') {
+                            node = el('ul', 'term-block');
+                            b.items.forEach(function (item) {
+                                var li = el('li');
+                                inlineInto(li, item, key);
+                                node.appendChild(li);
+                            });
+                        } else {
+                            node = el('pre', 'term-block term-code', b.text);
+                        }
+                        return node;
                     });
-                    return at;
-                }
-                // A line shows at its time, and the cursor moves to its end unless moveCursor is false. A line with the term-fade
-                // class fades in over its CSS transition
-                function lineAt(line, at, moveCursor) {
-                    events.push({ line: line, at: at, moveCursor: moveCursor !== false });
                 }
 
-                // The first prompt, `~$` and the space after it, is shown from the start, so it is there as the terminal fades in.
-                // Only `whoami` types, after the wait
-                var cmd1Spans = splitChars(cmd1, []);
-                var promptChars = cmd1.querySelector('.term-prompt').textContent.length + 1;
-                cmd1Spans.slice(0, promptChars).forEach(function (span) { span.style.opacity = '1'; });
-                var typed1End = typeAt(cmd1Spans.slice(promptChars), FADE_MS + AFTER_FADE_MS);
-                // The output of `whoami` appears at once, together with the second prompt, as a terminal shows them
-                var outputAt = typed1End + PAUSE_MS;
-                lineAt(printed, outputAt);
-                var cmd2Spans = splitChars(cmd2, []);
-                var promptChars2 = cmd2.querySelector('.term-prompt').textContent.length + 1;
-                cmd2Spans.slice(0, promptChars2).forEach(function (span) { events.push({ span: span, at: outputAt }); });
-                // `tree` types after the second prompt, after a short pause
-                var typed2End = typeAt(cmd2Spans.slice(promptChars2), outputAt + PROMPT_PAUSE_MS);
-                // The tree fades in line by line, each line LINE_MS after the one above. The final prompt fades in as the tree
-                // starts, and the cursor moves to it once the tree has faded in. The navbar drops NAV_GAP_MS after that
-                var treeAt = typed2End + PAUSE_MS;
-                var treeIn = treeAt;
-                outLines.forEach(function (line, i) {
-                    line.classList.add('term-fade');
-                    lineAt(line, treeAt + i * LINE_MS);
-                    treeIn = treeAt + i * LINE_MS + LINE_FADE_MS;
-                });
-                // The final prompt fades in with the tree's first line, and the cursor stays on the output. Once the tree has
-                // faded in, the cursor moves to the prompt. The prompt is already shown then, so that event only moves the cursor
-                promptEnd.classList.add('term-fade');
-                lineAt(promptEnd, treeAt, false);
-                lineAt(promptEnd, treeIn);
-                var navStart = treeIn + NAV_GAP_MS;
+                // The files are fetched once, when the page loads. A command that prints a file waits for its text
+                var content = {};   // a file's route -> { ok, text }, once it has loaded
+                var loading = {};   // a file's route -> its load promise
+                function loadFile(key) {
+                    if (!loading[key]) {
+                        loading[key] = fetch(new URL(key, document.baseURI))
+                            .then(function (res) {
+                                if (!res.ok) throw new Error('HTTP ' + res.status);
+                                return res.text();
+                            })
+                            .then(function (text) { content[key] = { ok: true, text: text }; },
+                                  function () { content[key] = { ok: false }; });
+                    }
+                    return loading[key];
+                }
 
-                // The cursor: a block the height of the text, in the body text colour. It sits at the end of the text being typed or
-                // printed. The script moves it with transform, so its blink is not restarted
-                var cursor = document.createElement('span');
-                cursor.className = 'term-cursor';
-                cursor.setAttribute('aria-hidden', 'true');
-                terminal.appendChild(cursor);
+                // Where the terminal is: the folder that the prompt shows, and the file being shown, if any
+                var cur = { folder: '', file: null };
+                // The prompt that takes the next command. It starts as the landing's last prompt
+                var live = document.getElementById('term-prompt-end');
+                var queue = [];        // commands waiting to run, in order
+                var busy = false;      // true while a timeline runs
+                var timeline = null;   // the running timeline
+                var cursor = null;
+                var lastRoute = null;  // the route last asked for. A hash change to that route is not run again
 
+                function ensureCursor() {
+                    if (!cursor) {
+                        cursor = el('span', 'term-cursor');
+                        cursor.setAttribute('aria-hidden', 'true');
+                    }
+                    if (!cursor.parentNode) terminal.appendChild(cursor);
+                }
+                function removeCursor() {
+                    if (cursor && cursor.parentNode) cursor.parentNode.removeChild(cursor);
+                }
+                // The cursor is a block the height of the text, in the body text colour. The script moves it with transform
                 function placeCursor(x, y, w, h) {
+                    ensureCursor();
                     var box = terminal.getBoundingClientRect();
                     cursor.style.width = w + 'px';
                     cursor.style.height = h + 'px';
@@ -314,44 +513,329 @@
                     }
                 }
 
-                // Everything starts hidden. The cursor starts before the first character
-                events.forEach(function (event) {
-                    if (event.span) event.span.style.opacity = '0';
-                });
-                lines.forEach(function (line) { line.style.opacity = '0'; });
-                var first = events[0].span.getBoundingClientRect();
-                placeCursor(first.left, first.top, first.width, first.height);
-                navbar.style.setProperty('--drop-delay', navStart + 'ms');
-                root.classList.add('term-live');
+                function isAnimated() { return root.getAttribute('data-motion') === 'animated'; }
+                function keepInView(node) { node.scrollIntoView({ block: 'nearest' }); }
 
-                // Each event shows at its time, and the cursor moves to it
-                var timers = [];
-                var t0 = performance.now();
-                events.forEach(function (event) {
-                    timers.push(setTimeout(function () {
-                        if (event.span) {
-                            event.span.style.opacity = '1';
-                            cursorAfterChar(event.span);
-                        } else {
-                            event.line.style.opacity = '1';
-                            if (event.moveCursor) cursorAtLineEnd(event.line);
+                // A timeline runs each action at its time. It ends when its last action has run, and the next command then starts
+                function startTimeline(actions) {
+                    var tl = { actions: actions, ran: [], count: 0, timers: [] };
+                    timeline = tl;
+                    busy = true;
+                    root.classList.add('term-live');
+                    actions.forEach(function (a, i) {
+                        tl.timers.push(setTimeout(function () { runOne(tl, i); }, a.at));
+                    });
+                }
+                function runOne(tl, i) {
+                    if (timeline !== tl || tl.ran[i]) return;
+                    tl.ran[i] = true;
+                    tl.count++;
+                    tl.actions[i].fn(false);
+                    if (tl.count === tl.actions.length) {
+                        timeline = null;
+                        busy = false;
+                        pump();
+                    }
+                }
+                // Leaving animated mode: the rest of the timeline shows at once, and its timers stop
+                function finishTimeline() {
+                    var tl = timeline;
+                    if (!tl) return;
+                    timeline = null;
+                    busy = false;
+                    tl.timers.forEach(clearTimeout);
+                    tl.actions.forEach(function (a, i) {
+                        if (!tl.ran[i]) {
+                            tl.ran[i] = true;
+                            a.fn(true);
                         }
-                    }, Math.max(0, event.at - (performance.now() - t0))));
-                });
+                    });
+                }
 
-                // Leaving animated mode shows everything at once and stops the timeline. Switching back later does not replay it
+                // Each action changes the page. In animated mode (instant false) it fades in, and the cursor follows it. In minimal
+                // mode (instant true) it shows at once
+                function typeChar(ch) {
+                    return function (instant) {
+                        var span = el('span', 'term-char', ch);
+                        live.appendChild(span);
+                        if (!instant) {
+                            ensureCursor();
+                            cursorAfterChar(span);
+                        }
+                        keepInView(live);
+                    };
+                }
+                function showOutput(node) {
+                    return function (instant) {
+                        if (instant) {
+                            node.style.opacity = '1';
+                            terminal.appendChild(node);
+                        } else {
+                            // Starts from opacity 0 and then goes to 1, so the fade runs
+                            node.classList.add('term-fade');
+                            node.style.opacity = '0';
+                            terminal.appendChild(node);
+                            void node.offsetHeight;
+                            node.style.opacity = '1';
+                            ensureCursor();
+                            cursorAtLineEnd(node);
+                        }
+                        keepInView(node);
+                    };
+                }
+                function showPrompt(folder) {
+                    return function (instant) {
+                        var p = promptLine(folder);
+                        terminal.appendChild(p);
+                        live = p;
+                        if (!instant) {
+                            ensureCursor();
+                            cursorAtLineEnd(p);
+                        }
+                        keepInView(p);
+                    };
+                }
+
+                // The steps of a click: one command, to the route the link names
+                function clickStep(item) {
+                    return isFile(item.key) ? catStep(item.cmd, item.key) : cdStep(item.cmd, item.key);
+                }
+                // The steps of an address: from where the terminal is to the route, one cd at a time, then cat for a file
+                function chainSteps(key, raw) {
+                    if (key === null) return [errStep('cd ' + raw, 'cd: no such file or directory')];
+                    var steps = [];
+                    var target = isFile(key) ? folderOf(key) : key;
+                    if (cur.file && !isFile(key) && target === cur.folder) {
+                        // Back from a file to its folder's listing
+                        steps.push(cdStep('cd ..', target));
+                    } else {
+                        var f = cur.folder;
+                        while (!contains(f, target)) {
+                            var up = parentOf(f);
+                            steps.push(cdStep('cd ..', up));
+                            f = up;
+                        }
+                        while (f !== target) {
+                            var down = childToward(f, target);
+                            steps.push(cdStep('cd ' + nameOf(down) + '/', down));
+                            f = down;
+                        }
+                    }
+                    if (isFile(key)) steps.push(catStep('cat ' + nameOf(key), key));
+                    return steps;
+                }
+                function cdStep(text, folder) {
+                    cur = { folder: folder, file: null };
+                    return { text: text, lines: listingLines(folder), promptFolder: folder };
+                }
+                function catStep(text, key) {
+                    var folder = folderOf(key);
+                    var c = content[key];
+                    if (!c || !c.ok) {
+                        cur = { folder: folder, file: null };
+                        return errStep(text, 'cat: ' + nameOf(key) + ': No such file or directory');
+                    }
+                    cur = { folder: folder, file: key };
+                    var lines = fileLines(key, c.text);
+                    lines.push(upLine(folder));
+                    return { text: text, lines: lines, promptFolder: folder };
+                }
+                function errStep(text, message) {
+                    return { text: text, lines: [lineEl(message)], promptFolder: cur.folder };
+                }
+
+                // Turns the steps of a command into timed actions. Each step types its command, waits, prints its output line by
+                // line, and shows a new prompt. The next step starts after a pause
+                function buildActions(steps) {
+                    var actions = [];
+                    var clock = 0;
+                    steps.forEach(function (step) {
+                        var t = clock;
+                        Array.from(step.text).forEach(function (ch, i) {
+                            if (i > 0) t += TYPE_MIN_MS + Math.random() * (TYPE_MAX_MS - TYPE_MIN_MS);
+                            actions.push({ at: t, fn: typeChar(ch) });
+                        });
+                        var outStart = t + PAUSE_MS;
+                        step.lines.forEach(function (node, i) {
+                            actions.push({ at: outStart + i * LINE_MS, fn: showOutput(node) });
+                        });
+                        var promptAt = outStart + (step.lines.length - 1) * LINE_MS + LINE_FADE_MS;
+                        actions.push({ at: promptAt, fn: showPrompt(step.promptFolder) });
+                        clock = promptAt + PAUSE_MS;
+                    });
+                    return actions;
+                }
+
+                // Runs the queued commands in order. A command waits while a timeline runs, and while a file it prints is loading
+                function pump() {
+                    while (!busy && queue.length) {
+                        var item = queue[0];
+                        if (item.key !== null && isFile(item.key) && !content[item.key]) {
+                            loadFile(item.key).then(pump);
+                            return;
+                        }
+                        queue.shift();
+                        var actions = buildActions(item.click ? [clickStep(item)] : chainSteps(item.key, item.raw));
+                        if (isAnimated()) {
+                            startTimeline(actions);
+                            return;
+                        }
+                        actions.forEach(function (a) { a.fn(true); });
+                    }
+                }
+
+                // The landing. It types the first prompt's `whoami` and then the second prompt's `tree`, and its output fades in
+                function splitChars(node, spans) {
+                    Array.prototype.slice.call(node.childNodes).forEach(function (child) {
+                        if (child.nodeType === 3) {
+                            var fragment = document.createDocumentFragment();
+                            Array.prototype.forEach.call(child.textContent, function (ch) {
+                                var span = el('span', 'term-char', ch);
+                                span.style.opacity = '0';
+                                fragment.appendChild(span);
+                                spans.push(span);
+                            });
+                            node.replaceChild(fragment, child);
+                        } else if (child.nodeType === 1) {
+                            splitChars(child, spans);
+                        }
+                    });
+                    return spans;
+                }
+                // Schedules the typed characters of a command: the first at `start`, then each after a random interval
+                function typeSpans(spans, start, actions) {
+                    var at = start;
+                    spans.forEach(function (span, i) {
+                        if (i > 0) at += TYPE_MIN_MS + Math.random() * (TYPE_MAX_MS - TYPE_MIN_MS);
+                        actions.push({ at: at, span: span, fn: showSpan(span) });
+                    });
+                    return at;
+                }
+                function showSpan(span) {
+                    return function (instant) {
+                        span.style.opacity = '1';
+                        if (!instant) {
+                            ensureCursor();
+                            cursorAfterChar(span);
+                        }
+                    };
+                }
+                function showLandingLine(line, moveCursor) {
+                    return function (instant) {
+                        line.style.opacity = '1';
+                        if (!instant && moveCursor) {
+                            ensureCursor();
+                            cursorAtLineEnd(line);
+                        }
+                    };
+                }
+                function moveCursorTo(line) {
+                    return function (instant) {
+                        if (!instant) {
+                            ensureCursor();
+                            cursorAtLineEnd(line);
+                        }
+                    };
+                }
+                function landingActions() {
+                    var actions = [];
+                    var cmd1 = document.getElementById('term-cmd-1');
+                    var cmd2 = document.getElementById('term-cmd-2');
+                    var printed = document.getElementById('term-print-1');
+                    var outLines = Array.prototype.slice.call(document.querySelectorAll('#term-output .term-line'));
+                    var promptEnd = document.getElementById('term-prompt-end');
+
+                    // The first prompt, `~$` and the space after it, shows from the start. Only `whoami` types, after the wait
+                    var cmd1Spans = splitChars(cmd1, []);
+                    var promptChars = cmd1.querySelector('.term-prompt').textContent.length + 1;
+                    cmd1Spans.slice(0, promptChars).forEach(function (span) { span.style.opacity = '1'; });
+                    var typed1End = typeSpans(cmd1Spans.slice(promptChars), FADE_MS + AFTER_FADE_MS, actions);
+                    // The output of `whoami` appears at once, together with the second prompt
+                    var outputAt = typed1End + PAUSE_MS;
+                    actions.push({ at: outputAt, line: printed, fn: showLandingLine(printed, true) });
+                    var cmd2Spans = splitChars(cmd2, []);
+                    var promptChars2 = cmd2.querySelector('.term-prompt').textContent.length + 1;
+                    cmd2Spans.slice(0, promptChars2).forEach(function (span) {
+                        actions.push({ at: outputAt, span: span, fn: showSpan(span) });
+                    });
+                    // `tree` types after the second prompt, after a short pause
+                    var typed2End = typeSpans(cmd2Spans.slice(promptChars2), outputAt + PROMPT_PAUSE_MS, actions);
+                    // The tree fades in line by line. The final prompt fades in as the tree starts, and the cursor moves to it once the
+                    // tree has faded in
+                    var treeAt = typed2End + PAUSE_MS;
+                    var treeIn = treeAt;
+                    outLines.forEach(function (line, i) {
+                        line.classList.add('term-fade');
+                        actions.push({ at: treeAt + i * LINE_MS, line: line, fn: showLandingLine(line, true) });
+                        treeIn = treeAt + i * LINE_MS + LINE_FADE_MS;
+                    });
+                    promptEnd.classList.add('term-fade');
+                    actions.push({ at: treeAt, line: promptEnd, fn: showLandingLine(promptEnd, false) });
+                    actions.push({ at: treeIn, fn: moveCursorTo(promptEnd) });
+                    return { actions: actions, navStart: treeIn + NAV_GAP_MS };
+                }
+
+                // Links that name a route get their route and the command they type. The command is `cd` for a folder and `cat` for a file
+                Array.prototype.forEach.call(document.querySelectorAll('a[href^="#/"]'), function (a) {
+                    var p = parseHash(a.getAttribute('href'));
+                    if (p.key === null) return;
+                    a.setAttribute('data-route', p.key);
+                    a.setAttribute('data-cmd', (isFile(p.key) ? 'cat ' : 'cd ') + a.textContent.trim());
+                });
+                Object.keys(FILES).forEach(function (key) { loadFile(key); });
+
+                // A click on a route link types its command. The browser then changes the address to the link's route, which
+                // lastRoute already holds, so the change is not run a second time
+                document.addEventListener('click', function (e) {
+                    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                    var link = e.target.closest ? e.target.closest('a[data-route]') : null;
+                    if (!link) return;
+                    lastRoute = link.getAttribute('data-route');
+                    queue.push({ click: true, key: lastRoute, cmd: link.getAttribute('data-cmd') });
+                    pump();
+                });
+                // Back, forward and a typed address run their route as a typed command, and are added to the history
+                window.addEventListener('hashchange', function () {
+                    var p = parseHash(location.hash);
+                    var id = p.key !== null ? p.key : '?' + p.raw;
+                    if (id === lastRoute) return;
+                    lastRoute = id;
+                    queue.push({ click: false, key: p.key, raw: p.raw });
+                    pump();
+                });
+                // Leaving animated mode shows everything at once and stops the timeline. Switching back later does not replay the landing
                 new MutationObserver(function () {
-                    if (root.getAttribute('data-motion') === 'animated') return;
-                    timers.forEach(clearTimeout);
-                    events.forEach(function (event) { (event.span || event.line).style.opacity = '1'; });
-                    cursor.remove();
+                    if (isAnimated()) return;
+                    finishTimeline();
+                    removeCursor();
                     root.classList.remove('term-live');
+                    pump();
                 }).observe(root, { attributes: true, attributeFilter: ['data-motion'] });
+
+                // An address that opens the page is run after the landing, so the history stays continuous
+                var initial = parseHash(location.hash);
+                lastRoute = initial.key !== null ? initial.key : '?' + initial.raw;
+                if (initial.key !== '') queue.push({ click: false, key: initial.key, raw: initial.raw });
+
+                if (isAnimated()) {
+                    var landing = landingActions();
+                    landing.actions.forEach(function (a) {
+                        if (a.span) a.span.style.opacity = '0';
+                        if (a.line) a.line.style.opacity = '0';
+                    });
+                    ensureCursor();
+                    var first = landing.actions[0].span.getBoundingClientRect();
+                    placeCursor(first.left, first.top, first.width, first.height);
+                    navbar.style.setProperty('--drop-delay', landing.navStart + 'ms');
+                    startTimeline(landing.actions);
+                } else {
+                    pump();
+                }
             }
 
             // If the terminal fails, the page shows everything: the hidden states apply only while term-failed is absent
             try {
-                runTerminal();
+                startTerminal();
             } catch (e) {
                 document.querySelectorAll('#terminal .term-char, #terminal .term-line').forEach(function (el) { el.style.opacity = '1'; });
                 document.documentElement.classList.add('term-failed');

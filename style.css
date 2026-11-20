@@ -530,6 +530,67 @@ html.term-live[data-motion="animated"] .term-fade {
     color: var(--dir);
 }
 
+/* A source/ link in the tree: the link colour and underlined, to set it apart from the names that stay in the directory colour */
+.terminal a.term-repo,
+.terminal a.term-repo:visited {
+    color: var(--link);
+    text-decoration: underline;
+}
+
+@media (hover: hover) {
+    .terminal a.term-repo:hover {
+        color: var(--link-hover);
+    }
+}
+
+/* Subpage blocks: the text of a .md file. They wrap, unlike the tree lines, and take the terminal's text colour */
+.term-block {
+    margin: 0 0 0.75em;
+    white-space: normal;
+}
+
+.term-heading {
+    font-size: inherit;
+    font-weight: 500;
+    margin: 0 0 0.75em;
+}
+
+.term-block ul {
+    margin: 0 0 0.75em;
+    padding-left: 1.5em;
+}
+
+.term-block strong {
+    font-weight: 500;
+}
+
+.term-block code {
+    padding: 0 0.25em;
+    border-radius: 3px;
+    background: var(--bg);
+    color: var(--text);
+}
+
+.term-block.term-code {
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--text);
+    white-space: pre;
+    overflow-x: auto;
+}
+
+/* Without JavaScript the full tree sits under the landing, centred like the landing's terminal */
+.term-noscript {
+    margin: 0 auto;
+}
+
+/* A new line is scrolled into view below the sticky navbar, so the navbar does not cover it */
+.terminal > * {
+    scroll-margin-top: 7rem;
+    scroll-margin-bottom: 1.5rem;
+}
+
 /* Mobile responsive */
 @media (max-width: 600px) {
     body {
