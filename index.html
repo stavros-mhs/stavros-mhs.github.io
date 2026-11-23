@@ -72,7 +72,7 @@
             <h1 class="sr-only">stavros-mhs</h1>
 
             <div class="landing">
-                <div class="term-stage term-fade" id="term-stage">
+                <div class="term-stage" id="term-stage">
                 <div class="terminal" id="terminal" role="region" aria-label="Terminal">
                     <div id="tree-view">
                     <p class="term-line" id="term-cmd-1"><span class="term-prompt">~$</span> whoami</p>
@@ -212,9 +212,11 @@
 
         <script>
             // The landing, the pages it opens, and the tree. The landing types whoami and tree, and its tree is the first page. A
-            // navbar name opens its folder's tree on a page of its own, which types tree and prints the folder. A click on a folder in
-            // a tree opens or closes it in place, and the counts follow each row as it appears or closes. A click on a file opens its
-            // page: the terminal types cat, and the file's markdown is printed below the terminal. The tab title and the prompt show the
+            // click on a navbar name, a footnote or a file moves to another page in four steps: the screen fades out to an empty
+            // terminal, the current prompt appears at once and the cd is typed, the new prompt appears at once, and tree or cat is
+            // typed and its output follows. Back, Forward, a typed address and a direct load change the page at once. A click on a
+            // folder in a tree opens or closes it in place, and the counts follow each row as it appears or closes. A file's page
+            // prints the file's markdown below the terminal. The tab title and the prompt show the
             // current path, and the address after # is the same path. Animated mode types and fades in what appears. Minimal mode shows
             // each change at once. Without JavaScript the landing stays as it is, and the noscript tree shows. The times are in ms, and
             // the constants below set them. The styles are in style.css
@@ -224,8 +226,6 @@
                 var treeView = document.getElementById('tree-view');
                 var fileView = document.getElementById('file-view');
                 var pageContent = document.getElementById('page-content');
-                var landing = document.querySelector('.landing');
-                var termStage = document.getElementById('term-stage');
                 var navbar = document.querySelector('.navbar');
 
                 // Times in ms. The fade (750 ms, cubic-bezier(0.08, 0.52, 0.52, 1)) and the navbar's drop (500 ms, ease-out) are in the CSS
@@ -238,8 +238,7 @@
                 var NAV_GAP_MS = 400;      // after the tree has faded in, before the navbar drops
                 var TYPE_MIN_MS = 90;      // a typed character follows the one before after a random interval in this range
                 var TYPE_MAX_MS = 170;
-                var SWAP_MS = 250;         // the tree terminal fades out, and the cat terminal fades in, each over this long
-                var MOVE_MS = 400;         // the cat terminal moves up to the top of the page over this long
+                var SWAP_MS = 250;         // the screen fades out to an empty terminal over this long, when a click moves to another page
 
                 var REPO = {
                     aralloc: 'https://github.com/stavros-mhs/aralloc',
@@ -367,8 +366,8 @@
                 // with instant false, and in minimal mode it runs at once with instant true. A batch's onDone runs when its last action
                 // has run. flushAll runs whatever is still pending at once, which is how a click or a mode change ends an animation
                 var pending = [];
-                function runActions(actions, onDone) {
-                    if (!isAnimated()) {
+                function runActions(actions, onDone, instant) {
+                    if (instant || !isAnimated()) {
                         actions.forEach(function (a) { a.fn(true); });
                         if (onDone) onDone();
                         return;
@@ -391,11 +390,12 @@
                             finishEntry(entry);
                         };
                         entry.timer = setTimeout(run, a.at);
-                        // An action that waits for the stage's fade runs when that fade ends. Its time is then only a fallback
+                        // An action that waits for an element's fade (untilFade is the element) runs when that fade ends. Its time is then only a fallback
                         if (a.untilFade) {
-                            var onFaded = function (e) { if (e.target === termStage && e.propertyName === 'opacity') run(); };
-                            termStage.addEventListener('transitionend', onFaded);
-                            entry.off = function () { termStage.removeEventListener('transitionend', onFaded); };
+                            var fading = a.untilFade;
+                            var onFaded = function (e) { if (e.target === fading && e.propertyName === 'opacity') run(); };
+                            fading.addEventListener('transitionend', onFaded);
+                            entry.off = function () { fading.removeEventListener('transitionend', onFaded); };
                         }
                         pending.push(entry);
                     });
@@ -430,6 +430,8 @@
                         }
                     };
                 }
+                // One typing interval: a typed character follows the one before it after this long
+                function typingGap() { return TYPE_MIN_MS + Math.random() * (TYPE_MAX_MS - TYPE_MIN_MS); }
                 function typeActions(line, text, start) {
                     var actions = [];
                     var at = start;
@@ -597,13 +599,9 @@
                 function buildTreePage(folder, animated, landingLines, onDone) {
                     var from = pageFolder;
                     clearPage();
-                    // A tree page shows whole: the stage is opaque and in place, whatever an earlier file page left
-                    setStage(1, true);
-                    endMove();
                     pageKind = folder === '' ? 'home' : 'dir';
                     pageFolder = folder;
                     pageFile = null;
-                    landing.classList.toggle('is-top', folder !== '');
                     treeView.hidden = false;
                     output = el('div', 'term-output');
                     output.id = 'term-output';
@@ -643,7 +641,8 @@
                                 ensureCursor();
                                 cursorAtLineEnd(cd);
                             }
-                            var typedCd = typeActions(cd, cdText, 0);
+                            // The prompt is in the page at once, and the first character of the cd follows one typing interval later
+                            var typedCd = typeActions(cd, cdText, animated ? typingGap() : 0);
                             actions = actions.concat(typedCd.actions);
                             treeAt = typedCd.end + PAUSE_MS;
                         }
@@ -657,7 +656,7 @@
                             cursorAtLineEnd(cmd);
                         }
                         if (cdText !== null) actions.push({ at: treeAt, fn: revealFn(cmd, true) });
-                        var typed = typeActions(cmd, 'tree', cdText !== null ? treeAt + TYPE_MIN_MS + Math.random() * (TYPE_MAX_MS - TYPE_MIN_MS) : treeAt);
+                        var typed = typeActions(cmd, 'tree', animated ? treeAt + typingGap() : treeAt);
                         actions = actions.concat(typed.actions);
                         clock = typed.end + PAUSE_MS;
                     }
@@ -684,7 +683,7 @@
                         if (footer) actions.push({ at: rows.lastAt + 2 * LINE_FADE_MS, fn: revealFn(footer, false) });
                     }
                     setPath(folder);
-                    runActions(actions, onDone || null);
+                    runActions(actions, onDone || null, !animated);
                 }
 
                 // A command line: the prompt and the space after it appear together at `start`, since the prompt is the machine's output.
@@ -708,37 +707,25 @@
                     });
                     return { actions: actions, end: at };
                 }
-                // The stage is the terminal's box. It fades as a whole, and it moves by transform
-                function setStage(v, instant) {
-                    if (instant) {
-                        termStage.classList.remove('term-fade');
-                        termStage.style.opacity = String(v);
-                        void termStage.offsetHeight;
-                        termStage.classList.add('term-fade');
-                    } else {
-                        termStage.style.opacity = String(v);
-                    }
+                // The screen clears when a click moves to another page: the terminal's content, the markdown and the footnote fade out
+                // together over SWAP_MS to an empty terminal, whose box stays where it is. Then build runs, with instant true if a click
+                // or a key ended the fade early. The cursor goes first, since it is not part of the content
+                function fadeOut(node, instant) {
+                    if (!instant) node.classList.add('term-fade');
+                    node.style.opacity = '0';
                 }
-                // The cat terminal moves from where it sits to the top of the page. Both positions are measured, and the move is a
-                // transform from the first to the second. The layout changes at once, so the box itself does not reflow
-                function moveTo(instant) {
-                    if (instant) {
-                        landing.classList.add('is-top');
-                        endMove();
-                        return;
-                    }
-                    var fromTop = termStage.getBoundingClientRect().top;
-                    landing.classList.add('is-top');
-                    var toTop = termStage.getBoundingClientRect().top;
-                    termStage.classList.remove('term-move');
-                    termStage.style.transform = 'translateY(' + (fromTop - toTop) + 'px)';
-                    void termStage.offsetHeight;
-                    termStage.classList.add('term-move');
-                    termStage.style.transform = 'translateY(0)';
+                function fadeReset(node) {
+                    node.classList.remove('term-fade');
+                    node.style.opacity = '';
                 }
-                function endMove() {
-                    termStage.classList.remove('term-move');
-                    termStage.style.transform = '';
+                function clearThen(build) {
+                    var faders = [treeView, fileView, pageContent].filter(function (n) { return !n.hidden && n.childNodes.length; });
+                    // The view that holds the terminal's lines ends the clear when its fade ends
+                    var gate = treeView.hidden ? fileView : treeView;
+                    runActions([
+                        { at: 0, fn: function (instant) { removeCursor(); faders.forEach(function (n) { fadeOut(n, instant); }); } },
+                        { at: SWAP_MS + 100, untilFade: gate, fn: function (instant) { faders.forEach(fadeReset); build(instant); } }
+                    ], null);
                 }
                 // The footer ends the markdown: a link to the folder that holds the file
                 function footerLine(folder) {
@@ -746,9 +733,9 @@
                     p.appendChild(routeLink(folder, '> cd ..'));
                     return p;
                 }
-                // A file's page. The tree terminal fades out, and the cat terminal fades in where it was. It types its prompt and the
-                // command, then moves up to the top of the page, and the markdown prints below it, one block at a time. A footer after
-                // the last block goes back to the folder that holds the file. Minimal mode shows it all at once
+                // A file's page. After the screen has cleared, it types its prompt and the command, and the markdown prints below the
+                // terminal one block at a time, starting 300 ms after the command. A footer after the last block goes back to the folder
+                // that holds the file. Instant (a typed address, Back, Forward, minimal mode) shows it all at once
                 function buildFilePage(key, animated) {
                     var folder = folderOf(key);
                     // The folder the terminal is in now: a file in another folder is reached by a cd, typed first
@@ -777,8 +764,8 @@
                         var footer = hidden(footerLine(folder), !instant);
                         pageContent.appendChild(footer);
                         setPath(folder, key);
-                        setStage(1, instant);
-                        // The typing starts once the cat terminal has faded in, and the steps after it are timed from the typing's start
+                        // The prompts appear at once, and each command types an interval after its prompt. The cat line's prompt appears
+                        // 300 ms after the cd. The markdown starts 300 ms after the cat command
                         var rest = [];
                         var catAt = 0;
                         if (cdLine) {
@@ -788,25 +775,17 @@
                         }
                         var typed = typeText(cmd, promptText(folder) + ' cat ' + nameOf(key), catAt, promptText(folder).length);
                         rest = rest.concat(typed.actions);
-                        var moveAt = typed.end + PAUSE_MS;
-                        var blocksAt = moveAt + MOVE_MS;
-                        rest.push({ at: moveAt, fn: moveTo });
-                        // The markdown appears once the move has ended. The move's transform is left at its end value, so its transition ends cleanly.
+                        var blocksAt = typed.end + PAUSE_MS;
                         // The container is shown and laid out before its blocks are revealed, so each block fades from opacity 0
                         rest.push({ at: blocksAt, fn: function (instantNow) { pageContent.hidden = false; if (!instantNow) void pageContent.offsetHeight; } });
                         blocks.forEach(function (b, i) { rest.push({ at: blocksAt + i * LINE_MS, fn: revealFn(b, false) }); });
                         var lastAt = blocksAt + (blocks.length - 1) * LINE_MS + LINE_FADE_MS;
                         rest.push({ at: lastAt, fn: revealFn(footer, false) });
                         rest.push({ at: lastAt, fn: revealFn(end, true) });
-                        var whenFaded = { at: SWAP_MS + 100, untilFade: true, fn: function (instantNow) {
-                            if (instantNow) rest.forEach(function (a) { a.fn(true); });
-                            else runActions(rest, null);
-                        } };
-                        if (instant) whenFaded.fn(true);
-                        else runActions([whenFaded], null);
+                        runActions(rest, null, instant);
                     };
-                    // The swap waits for the tree's fade-out to end. The time after it is only a fallback, in case no fade ran
-                    runActions([{ at: 0, fn: function (instant) { setStage(0, instant); } }, { at: SWAP_MS + 100, untilFade: true, fn: swap }], null);
+                    if (animated) clearThen(swap);
+                    else swap(true);
                 }
 
                 // An error: the command types at the current folder's prompt, then the message and the prompt. A footnote below the
@@ -817,7 +796,6 @@
                     pageKind = 'error';
                     pageFolder = folder;
                     pageFile = null;
-                    landing.classList.add('is-top');
                     fileView.hidden = false;
                     var cmd = promptLine(folder, 'term-cmd');
                     var msg = hidden(lineEl('cd: no such file or directory'), animated);
@@ -840,7 +818,7 @@
                         { at: outStart + LINE_MS + LINE_FADE_MS, fn: revealFn(footer, false) }
                     ]);
                     setPath(folder);
-                    runActions(actions, null);
+                    runActions(actions, null, !animated);
                 }
 
                 // The markdown the files use: headings, paragraphs, lists and fenced code, and inside them links, bold and `code`
@@ -967,43 +945,46 @@
                     if (!pendingInitial) return;
                     pendingInitial = false;
                     lastRoute = routeId(initial.key, initial.raw);
-                    applyRoute(initial.key, initial.raw);
+                    applyRoute(initial.key, initial.raw, false);
                 }
                 // A user's action ends whatever is still animating, and takes the place of an address that is still waiting
                 function userAction() {
                     pendingInitial = false;
                     flushAll();
                 }
-                // Shows a route: a file's page, or a folder's tree on a page of its own. The home route is the landing's tree
-                function applyRoute(key, raw) {
+                // Shows a route: a file's page, or a folder's tree on a page of its own. The home route is the landing's tree. seq is true
+                // for a click: in animated mode it plays the sequence (clear, cd, tree or cat). Otherwise the page changes at once
+                function applyRoute(key, raw, seq) {
+                    var animated = seq && isAnimated();
                     if (key === null) {
-                        buildErrorPage(raw, isAnimated());
+                        buildErrorPage(raw, false);
                         return;
                     }
                     if (isFile(key)) {
                         if (!content[key]) {
-                            loadFile(key).then(function () { if (lastRoute === key) applyRoute(key, key); });
+                            loadFile(key).then(function () { if (lastRoute === key) applyRoute(key, key, seq); });
                             return;
                         }
                         if (pageKind === 'file' && pageFile === key) {
                             setPath(folderOf(key), key);
                             return;
                         }
-                        buildFilePage(key, isAnimated());
+                        buildFilePage(key, animated);
                         return;
                     }
                     if ((pageKind === 'home' || pageKind === 'dir') && pageFolder === key) {
                         setPath(key);
                         return;
                     }
-                    buildTreePage(key, isAnimated(), false, null);
+                    if (animated) clearThen(function (instant) { buildTreePage(key, !instant, false, null); });
+                    else buildTreePage(key, false, false, null);
                 }
                 // A click or the navbar: sets the address to the route, and shows it
                 function navigate(key) {
                     userAction();
                     lastRoute = key;
                     setHash(key);
-                    applyRoute(key, key);
+                    applyRoute(key, key, true);
                 }
                 // A click on a folder opens it in place, or closes it if it is open. Opening a folder only lists it: the terminal does
                 // not move, so the path, the prompt and the address stay where they are
@@ -1040,6 +1021,11 @@
                     if (link.hasAttribute('data-toggle')) toggleDir(key, link);
                     else navigate(key);
                 });
+                // A key ends a running sequence at once, as a click does. The landing is left to play
+                document.addEventListener('keydown', function (e) {
+                    if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta') return;
+                    if (!pendingInitial && pending.length) flushAll();
+                });
                 // Back, forward and a typed address show their route
                 window.addEventListener('hashchange', function () {
                     var p = parseHash(location.hash);
@@ -1047,7 +1033,7 @@
                     if (id === lastRoute) return;
                     userAction();
                     lastRoute = id;
-                    applyRoute(p.key, p.raw);
+                    applyRoute(p.key, p.raw, false);
                 });
                 // Leaving animated mode shows everything at once and stops the animations. Going back to animated mode shows the
                 // terminal again, so the page does not stay hidden

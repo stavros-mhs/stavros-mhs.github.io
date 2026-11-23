@@ -638,15 +638,11 @@ html.term-live[data-motion="animated"] .term-fade {
     scroll-margin-bottom: 1.5rem;
 }
 
-/* The stage holds the terminal's box. It fades as a whole (the .term-fade rule above), and a file page moves it with a transform
-   (.term-move, animated mode only) */
+/* The stage holds the terminal's box. It does not fade or move: a click that moves to another page fades the content out (the
+   .term-fade rule above), and the box stays where it is */
 .term-stage {
     width: 100%;
     max-width: 760px;
-}
-
-html.term-live[data-motion="animated"] .term-move {
-    transition: transform 0.4s ease-out;
 }
 
 /* The footnote, "> cd ..": a link back up to a folder, at the right of the page's column, under the markdown or the terminal. It uses
