@@ -144,15 +144,20 @@ input[type=checkbox]:checked + .display label .circle .moon {
     opacity: 0;
 }
 
-/* Animations switch: a button in the navbar, styled to match the theme toggle */
+/* Animations switch: a button fixed at the bottom right, styled to match the theme toggle. The label "Animations" is on top, as wide
+   as the track: its font size is the track's width over six (ten characters of JetBrains Mono, 0.6em each). The state, ON or OFF, is
+   inside the track, on the side the knob has left */
 .motion-switch {
+    --switch-w: 80px;      /* the track's width, and the label's */
+    --knob-space: 36px;    /* the knob's width and its two 4px gaps' share: the free part of the track is 100% minus this */
     display: inline-flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.6rem;
+    gap: 0.35rem;
     margin: 0;
-    padding: 0.4rem 0.6rem;
+    padding: 0.5rem 0.75rem 0.6rem;
     border: 0;
-    border-radius: 999px;
+    border-radius: 16px;
     background: var(--bg);
     position: fixed;
     right: 1rem;
@@ -169,11 +174,10 @@ input[type=checkbox]:checked + .display label .circle .moon {
     display: none;
 }
 
-/* The visible state word: a fixed width, so the navbar does not shift between On and Off */
-.motion-state {
-    display: inline-block;
-    min-width: 2.2em;
-    text-align: left;
+.motion-label {
+    font-size: calc(var(--switch-w) / 6);
+    line-height: 1.2;
+    white-space: nowrap;
 }
 
 /* Focus ring, shown for keyboard focus, as on the theme toggle */
@@ -185,11 +189,37 @@ input[type=checkbox]:checked + .display label .circle .moon {
 .motion-track {
     position: relative;
     display: inline-block;
-    width: 80px;
+    width: var(--switch-w);
     height: 40px;
     border-radius: 999px;
     background: var(--surface);
     box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* The state word fills the free part of the track, the part the knob has left, and is centred in it. It is aria-hidden: the
+   button's state is aria-checked. The text swaps with no animation */
+.motion-state {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: calc(100% - var(--knob-space));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text);
+    font-size: calc(var(--switch-w) * 0.15);
+    font-weight: 500;
+    line-height: 1;
+    pointer-events: none;
+}
+
+/* Animations on: the knob is on the right, so ON is on the left. Off: the knob is on the left, so OFF is on the right */
+.motion-switch[aria-checked="true"] .motion-state {
+    left: 0;
+}
+
+.motion-switch[aria-checked="false"] .motion-state {
+    right: 0;
 }
 
 .motion-knob {
@@ -738,12 +768,12 @@ html.term-live[data-motion="animated"] .term-move {
     }
 
     .motion-switch {
+        --switch-w: 60px;
+        --knob-space: 28px;
         position: static;
-        font-size: 0.9rem;
     }
 
     .motion-track {
-        width: 60px;
         height: 30px;
     }
 

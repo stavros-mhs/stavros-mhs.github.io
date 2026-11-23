@@ -121,8 +121,7 @@
         <footer>
             <button type="button" class="motion-switch" id="motion" role="switch" aria-checked="false" hidden>
                 <span class="motion-label">Animations</span>
-                <span class="motion-state" aria-hidden="true">Off</span>
-                <span class="motion-track" aria-hidden="true"><span class="motion-knob"></span></span>
+                <span class="motion-track" aria-hidden="true"><span class="motion-state">OFF</span><span class="motion-knob"></span></span>
             </button>
         </footer>
 
@@ -149,7 +148,7 @@
                 function sync() {
                     var on = root.getAttribute('data-motion') === 'animated';
                     button.setAttribute('aria-checked', on ? 'true' : 'false');
-                    button.querySelector('.motion-state').textContent = on ? 'On' : 'Off';
+                    button.querySelector('.motion-state').textContent = on ? 'ON' : 'OFF';
                 }
 
                 button.removeAttribute('hidden');
