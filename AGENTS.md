@@ -20,10 +20,11 @@ APM_RULES {
 ## Motion
 
 - Test animation work in both motion modes, animated and minimal, with reduced motion both on and off, in both themes, at widths above 600px and at 600px or below.
-- Animate only `opacity` and `transform` in any new effect. Do not animate `filter`, `width`, `height`, `top`, `left`, `margin` or font properties in new effects. Existing colour and toggle transitions stay as they are. The Animations switch's background, track and knob may fade in colour over 0.5s, in animated mode only, to match the theme toggle's existing colour transitions.
+- Animate only `opacity` and `transform` in any new effect. Do not animate `filter`, `width`, `height`, `top`, `left`, `margin` or font properties in new effects. Existing colour and toggle transitions stay as they are. The Animations switch's background, track and knob may fade in colour over 0.5s, in animated mode only, to match the theme toggle's existing colour transitions. The terminal box's `height` may also transition, in animated mode only, over 250 to 300 ms with ease-out, so the box resizes smoothly as its content clears and arrives (User, 23 Nov, Task 3.9). While it transitions the box clips its content (`overflow: hidden`), so no text is ever outside the box.
 - Use the `data-motion` attribute on `<html>` as the only switch between modes. Do not use `prefers-reduced-motion` in CSS.
 - Hide content for a reveal only under `html[data-motion="animated"]`, and only until its observer has fired. With JavaScript off, or in minimal mode, the content shows at once.
 - Put hover effects inside `@media (hover: hover)`, so touch devices do not keep a stuck hover state.
+- In the terminal, anything the machine does, such as printing a prompt, a path, command output or an autocomplete completion, appears instantly, in one frame. Only what the user types (the commands) is typed one character at a time, at the human, uneven pace of `typeActions` (90 to 170 ms per character, `TYPE_MIN_MS` and `TYPE_MAX_MS`). Do not fade or type machine output, except where the Spec or your Task Prompt says to.
 - Every new transition or animation must respect the minimal-mode rules. Do not write a rule that re-enables a transition in minimal mode.
 - When you report a duration, position or other measured value, give the number and how you sampled it.
 - Full-page screenshot comparisons are noisy. Compare the same element, or repeat each capture, before you report a difference.

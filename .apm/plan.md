@@ -13,9 +13,9 @@ This plan covers the motion session, re-planned on 19 Nov. The site becomes a te
 | Stage | Name | Tasks | Agents |
 |-------|------|-------|--------|
 | 1 | Headings and sections | 1.1, 1.2 and 1.4 done. 1.3 and 1.5 withdrawn | site-agent |
-| 2 | Terminal landing (desktop) | 2.1–2.5 | site-agent |
-| 3 | Desktop finish | 3.1–3.3 | site-agent |
-| 4 | Minimal mode, mobile and QA | 4.1–4.3 | site-agent |
+| 2 | Terminal landing (desktop) | 2.1–2.7 | site-agent |
+| 3 | Desktop finish | 3.1–3.9 (order: 3.4, 3.7, 3.8, 3.9, 3.5, 3.6, 3.2, 3.3) | site-agent |
+| 4 | Minimal mode, mobile and QA | 4.1–4.4 (4.4 runs before 4.2) | site-agent |
 
 ## Notes
 
@@ -40,7 +40,9 @@ This plan covers the motion session, re-planned on 19 Nov. The site becomes a te
 
 **Dispatch.** Stage 2 runs in order: 2.1 (with follow-up 01), 2.2, 2.3, 2.4, then 2.5. Then Stage 3 (3.1 to 3.3), the desktop finish. Then Stage 4 (4.1 to 4.3): minimal mode, the mobile pass and QA. A colour Task follows after Task 2.4. Dark `--accent` becomes `#edab71`, which is 4.50:1 on the dark surface. Light stays `#b5602e`, as the User chose, and the Rules now allow 3:1 for headings at 24px and above.
 
-**Branch timing.** Each Task's branch is cut from `main` after the previous Task is merged. Task 2.1 starts from `main` at `4477350`.
+**Branch timing.** Tasks 1.1 to 2.5 were cut from `main`. From 23 Nov, each Task's branch is cut from `dev` (at `f951538`) after the previous Task is merged into `dev`. When the site is finished, `dev` merges into `main`. Wherever a Task below says "the merged `main`", read `dev`.
+
+**Cd model (User, 23 Nov).** The User kept the cd model of `f951538`, which has no Task. The Spec's Terminal Landing describes it, and it supersedes the Task 2.2 navigation wording. Task 2.5's output is the tree fade, the cat terminal move and the `cd ..` footnote, as `e1892ae` built them.
 
 **Review loop, per Task.**
 1. The Worker commits on its branch and reports to the Manager.
@@ -159,6 +161,24 @@ This plan covers the motion session, re-planned on 19 Nov. The site becomes a te
 - **Validation:** Written when the Task is dispatched.
 - **Guidance:** Animate only `opacity` and `transform`. The move is a `transform`. The `> cd ..` footer uses `--dir` and `--dir-hover`.
 
+### Task 2.6: Rebuild the local checks and verify the cd model (added 23 Nov)
+
+- **Agent:** site-agent
+- **Objective:** Re-create `tools/` (lost with the move to a new machine), then verify `feat/md-transition` at `f951538` and fix only what the checks show is broken. Report the open questions with measured facts, without deciding them.
+- **Dependencies:** Task 2.5 (Same-Worker)
+- **Output:** `tools/` at the workspace root (local only), any fixes committed on `feat/md-transition`, a Task Log and a Report. Worktree `.apm/worktrees/feat-md-transition`.
+- **Validation:** As in the Task Prompt. Task 4.3 later extends these tools instead of re-creating them.
+- **Guidance:** The cd model stays. Colours, text and the navbar size are not changed here.
+
+### Task 2.7: Contrast of small links, and the switch on phones (added 23 Nov)
+
+- **Agent:** site-agent
+- **Objective:** Apply the User's decisions from the Task 2.6 review: light-mode footnote and sub-24px navbar names use `--dir-hover` at rest, and on phones the Animations switch moves into the page flow.
+- **Dependencies:** Task 2.6 (Same-Worker)
+- **Output:** Changes in `index.html` and `style.css` on `feat/md-transition`, in the existing worktree.
+- **Validation:** All of `tools/` re-run: `contrast_check.py` 0 failed, `phone-check.mjs` 0 failed at 360 and 390, other checks unchanged. Desktop switch position unchanged.
+- **Guidance:** Spec, "Motion Modes and the Animations Switch". Colours only from existing tokens. The dark prompt, the navbar size and the minimal-mode transition (Task 3.3) stay as they are.
+
 ## Stage 3: Hover and modes
 
 ### Task 3.1: The Animations switch shows its label and its state
@@ -167,14 +187,14 @@ This plan covers the motion session, re-planned on 19 Nov. The site becomes a te
 - **Objective:** Place the word "Animations" above the switch, in a font size that makes the label as wide as the switch. The switch shows `ON` or `OFF` on its own track, in a colour that matches each mode in light and dark.
 - **Dependencies:** Task 2.5 (Same-Worker)
 - **Output:** The switch's markup and style in `index.html` and `style.css`. Branch `feat/switch-label`, cut from the merged `main`.
-- **Validation:** Written when the Task is dispatched. The label and the switch are the same width. The `ON` and `OFF` text meets the 4.5:1 rule for normal text in both themes. The switch keeps its keyboard behaviour and its focus ring.
+- **Validation:** As in the Task Prompt (23 Nov). The label and the switch are the same width. The `ON` and `OFF` text meets the 4.5:1 rule for normal text in both themes. The switch keeps its keyboard behaviour and its focus ring. Branch cut from `dev`.
 - **Guidance:** The switch stays fixed at the bottom right. Its track and knob keep their colour transitions, as the Spec says.
 
 ### Task 3.2: Hover states
 
 - **Agent:** site-agent
 - **Objective:** Add hover states for links, the terminal's directory names and the `source/` link, and the Animations switch's hover ring, for devices with hover, in animated mode.
-- **Dependencies:** Task 3.1 (Same-Worker)
+- **Dependencies:** Task 3.1, Task 3.4, Task 3.5 and Task 3.6 (Same-Worker)
 - **Output:** Rules in `style.css` inside `@media (hover: hover)`. The link underline is an `::after` line that scales from the left, in `currentColor`, and it replaces the `text-decoration` underline on hover and active. This Task also moves the site-wide `a:hover` rule inside the media query. The switch gets a 1px `--link` ring, with a 0.3s opacity fade, in animated mode. Branch `feat/hover-states`, cut from the merged `main`.
 - **Validation:**
   - In animated mode, hovering a text link shows an underline that grows from the left over about 0.3 seconds.
@@ -201,6 +221,89 @@ This plan covers the motion session, re-planned on 19 Nov. The site becomes a te
   - The contrast script passes. The User checks the theme fade and the scrolling in both modes, and approves the merge.
 - **Guidance:** Spec, "Theme Transitions and Smooth Scrolling" and "Mode Effects". The minimal rules go at the end of `style.css`, with `!important`. Do not change any colour value.
 
+### Task 3.4: The new prompt appears at once after a cd (added 23 Nov)
+
+- **Agent:** site-agent
+- **Objective:** After a `cd` line finishes, the prompt of the folder it moved to appears instantly, as machine output, and then the next command (`tree`) types at human speed. Today the new prompt and the `tree` line are hidden, then revealed with the 250 ms fade at the same moment the first character of `tree` types (`buildTreePage` in `index.html`, the `revealFn(cmd, true)` at `treeAt`, then `typeActions(cmd, 'tree', treeAt)`).
+- **Dependencies:** Task 3.1 (Same-Worker)
+- **Output:** The fix in `index.html` (and `style.css` only if the fade needs it), on a branch `fix/cd-prompt-instant` cut from `dev`.
+- **Validation:** Written when the Task is dispatched. In animated mode, after a `cd` from every starting folder to every folder (navbar, `cd ..`, `cd ~`, Back and Forward), the new prompt is in the page in full, with no fade, in one frame, after the existing 300 ms pause, and the first character of `tree` follows one typing interval later. The same holds for any other command that starts on a new prompt after a `cd`. Minimal mode is unchanged, and no other check changes.
+- **Guidance:** Spec, "Terminal Landing", and the instant-prompt rule from Task 2.7 follow-up 01: the prompt is machine output, and only commands type at human speed.
+
+
+### Task 3.5: Tab completion in the typed `cd` (added 23 Nov)
+
+- **Agent:** site-agent
+- **Objective:** Make the typed `cd` look like a person using a terminal's Tab completion. The user types the start of the folder, a Tab is pressed, and the machine completes it. Example, from the root: `cd ~/pro`, a beat, then `cd ~/projects/` appears at once. Then the Enter and the typed `tree` follow, as before.
+- **Dependencies:** Task 3.9 (Same-Worker)
+- **Output:** The change in `index.html` (and `style.css` only if needed), on a branch `feat/tab-complete` cut from `dev`.
+- **Typing pace.** Unchanged: 90 to 170 ms per character. The User considered 55 wpm on 23 Nov and kept the current feel.
+- **Defaults (confirmed by the User, 23 Nov):**
+  - Prefix: the first three letters of each path segment that has more than three letters (`pro` for `projects`), or the whole segment if it has three or fewer.
+  - Tab beat: about 250 ms of nothing, then the completion of that segment appears at once, including the `/`. For a nested path such as `~/projects/aralloc/`, each segment completes in turn: `~/pro`, Tab, `jects/`, `ara`, Tab, `lloc/`.
+  - No completion for `cd ..` and `cd ~`, which have nothing to complete.
+  - It also applies to the typed `cat` line on file pages (`cat WHO`, Tab, `AMI.md`). Say no to keep `cat` as it is.
+  - The `tree` line after the cd is typed in full, without completion.
+  - Minimal mode shows the whole command at once.
+  - Two leftovers from Task 3.4's review, applied here for consistency with the machine-and-human rule: (1) a command's first typed character comes one typing interval after its own prompt, not in the same frame, for the `cd` line, the error page's `cd nope/` line and `tree` after no `cd`; (2) the landing's second prompt, before `tree` and after `whoami`'s output, appears instantly instead of fading in. The end-of-tree prompt keeps its fade with the first tree line, as the User set in Task 2.1 follow-up 04.
+- **Validation:** Written when the Task is dispatched. In animated mode the typed characters keep the 90 to 170 ms pace, the beat before the completion is measured, the completion is in the page in one frame, and the final command text is exactly what it was before. Each route into a folder or file is checked, from every starting folder.
+- **Guidance:** The machine-speed rule: the completion is machine output and appears instantly, with no fade or typing. The cursor follows the end of the text. The typing and completion must not change the final text or the pause that follows.
+
+### Task 3.6: The Animations switch as a full-face button (added 23 Nov)
+
+- **Agent:** site-agent
+- **Objective:** Replace the knob and track of Task 3.1 with a full-face button: no knob and no slide. `ON` or `OFF` is engraved across the whole face in the mode's accent colour. The label "Animations" stays above, as wide as the button.
+- **Dependencies:** Task 3.5 (Same-Worker)
+- **Output:** The markup in `index.html` and the style in `style.css`, on a branch `feat/switch-face` cut from `dev`.
+- **Defaults (confirmed by the User, 23 Nov):**
+  - Colour: `--prompt` (`#edae77` dark, `#934e25` light), 4.61:1 on `--surface`, in both states. `--accent` in light mode is 3.31:1 and fails for normal text.
+  - Engraved: a static `text-shadow` of 1px, a highlight below and a shade above, in the same style as the track's inset shadow. No animation.
+  - Size: the face keeps the track's size (80 by 40px on desktop, 60 by 30px on phones), so the label matches it as in Task 3.1. The text is about 15% of the width, 12px on desktop and 9px on phones.
+  - The word swaps with no animation. The colour fade of the face is added in Task 3.3, with the other switch fades.
+  - The button's corner radius is the pill again (999px), as the face is a pill. The 16px radius of Task 3.1 applies to the label's container only if it still has one.
+- **Validation:** Written when the Task is dispatched. The face text reaches 4.5:1 in both themes and both states, the label equals the face's width, and keyboard, focus ring, accessible name and saved mode are unchanged. Phones cover nothing, as in Task 3.1.
+- **Guidance:** Spec, "Motion Modes and the Animations Switch". No knob element remains.
+
+### Task 3.7: The landing terminal sits at the same height as on other pages (added 23 Nov)
+
+- **Agent:** site-agent
+- **Objective:** The terminal on the landing appears at the same height as on folder and file pages, so that clicking the navbar does not make it jump.
+- **Dependencies:** Task 3.4 (Same-Worker)
+- **Output:** The change in `style.css` (and `index.html` only if needed), on a branch `feat/terminal-top` cut from `dev`.
+- **Defaults to confirm (User):** the landing moves to the folder pages' position (the top), not the other way. It applies on desktop and phones, in both motion modes. The desktop negative margin on `.landing` that centred the terminal (Task 2.1 follow-up 03) is removed or replaced. The terminal's top edge is fixed, and it grows only downward as lines appear: no vertical centring, and no layout that shifts the top as the height changes (User, 23 Nov). Nothing else changes: the order of the landing's output, the navbar drop and the fades.
+- **Validation:** Written when the Task is dispatched. The terminal box's top, measured with `getBoundingClientRect()`, is the same, within 1px, on the landing and on every folder and file page, at 1280, 800, 601, 390 and 360px wide, in both themes and both modes. The top is also sampled from the first frame to the end of the landing's animation, and while a folder opens in place, and it never moves, within 1px, while the bottom edge grows. No sideways scroll, and no overlap with the navbar or the switch.
+- **Guidance:** Spec, "Terminal". The Animations switch and the footnote positions do not change.
+
+### Task 3.8: Clear the screen, then type and execute the cd (added 23 Nov, revised the same day)
+
+- **Agent:** site-agent
+- **Objective:** When the user clicks the `> cd ..` footnote or a navbar name, the screen first clears (fades out to an empty terminal at the same top). Then the current prompt appears, the `cd` is typed and executed, the destination's prompt appears, and the next command types. The move to the root, or to any previous state, is seamless.
+- **Dependencies:** Task 3.7 (Same-Worker)
+- **Output:** The change in `index.html` (and `style.css` only if needed), on a branch `feat/cd-in-place` cut from `dev`. It replaces the part of the cd model where the new page types the `cd` line.
+- **Sequence (User, 23 Nov, chosen from three options):**
+  1. Click. The terminal's content, the markdown and the footnote fade out together over 250 ms to an empty terminal, which stays at the same top (Task 3.7).
+  2. The current prompt appears at once, for example `~/projects/ginny$`.
+  3. `cd ..` is typed at human speed (90 to 170 ms per character, the first one an interval after the prompt), then a 300 ms pause.
+  4. The new prompt appears at once, for example `~/projects$`.
+  5. `tree` (or `cat`) types, and its rows fade in as they do now.
+- **Defaults to confirm (User):**
+  - It applies to the footnote's `cd ..` and to the navbar names, including the `~/` item. Clicking a folder in the tree still expands in place with no `cd`.
+  - The `cd` command is the same as now (`cd ..`, `cd ~`, `cd ~/<folder>/`). When the destination is the folder the prompt is already in (a file page going back to its folder), no `cd` is typed: clear, prompt, `tree`.
+  - A second click while the sequence runs finishes it at once and goes on. Back, Forward, typed addresses and a direct load have no terminal to clear and type in, so they change the page at once, as now. Minimal mode changes the page at once.
+  - Keyboard use (Enter on the link) behaves like a click.
+  - Cleanup that Task 3.7 left: the file page's terminal move is now a no-op that still waits 400 ms. This Task removes `moveTo`, the `term-move` styles, the 400 ms wait and the dead `is-top` class, since it reworks the same transition code. The markdown blocks, footer and fades keep their timing.
+- **Validation:** Written when the Task is dispatched. In animated mode, for every route in the defaults and from every starting page, the order and the timing of the five steps are sampled: the 250 ms fade, the instant prompts at full opacity, the typing pace, the 300 ms pause. The terminal's top never moves. The new page shows no repeated `cd` line. The final text of every page is unchanged.
+- **Guidance:** Spec, "Clear, then cd". Machine output is instant, human typing is typed, the fade-out is the clear. Do not change the pace.
+
+### Task 3.9: A smooth clear, and a box that follows its content (added 23 Nov)
+
+- **Agent:** site-agent
+- **Objective:** Rework the clear sequence of Task 3.8 as the User wants: the text fades out inside the box, the box resizes smoothly to the empty box, then the `cd` is typed, then the destination's rows arrive with the box growing smoothly row by row. The box never holds a stale or fixed height, and no text is ever outside it.
+- **Dependencies:** Task 3.8 (Same-Worker). Task 3.8 is not merged yet, so this Task's branch `feat/smooth-clear` is cut from `feat/cd-in-place` at `cc60a86`.
+- **Output:** Changes in `index.html` and `style.css`, on `feat/smooth-clear`. The Rules (`AGENTS.md`, Motion) now allow the terminal box's `height` to transition in animated mode, over 250 to 300 ms with ease-out, as the User asked.
+- **Validation:** Written when the Task is dispatched.
+- **Guidance:** Spec, "Clear, then cd". Replace the fixed-height lock of Task 3.8 follow-up 01 (`holdHeight`), which let text spill out of the box. Machine output is instant, human typing is typed.
+
 ## Stage 4: Minimal mode, mobile and QA
 
 ### Task 4.1: Minimal mode
@@ -216,7 +319,7 @@ This plan covers the motion session, re-planned on 19 Nov. The site becomes a te
 
 - **Agent:** site-agent
 - **Objective:** Check every mode at phone widths, and refine the phone layout, the terminal, the burger, and minimal mode. When the burger's panel opens, blur the page behind it. The blur fades in with `opacity` only.
-- **Dependencies:** Task 4.1 (Same-Worker)
+- **Dependencies:** Task 4.1 and Task 4.4 (Same-Worker). The User's choice from the Task 4.4 trial settles the phone terminal's text size or prompt
 - **Output:** The fixes and refinements the User agrees, on a `feat/mobile` branch cut from the merged `main`.
 - **Validation:** Written when this Task is due.
 - **Guidance:** Written when this Task is due, with the User's decisions on the phone layout.
@@ -235,3 +338,12 @@ This plan covers the motion session, re-planned on 19 Nov. The site becomes a te
   - Any cell that cannot run is reported as skipped, with the reason.
   - The Worker stops after reporting. The User gives the final acceptance review on localhost in both themes and both modes.
 - **Guidance:** Spec, "Verification". Use Playwright from `tools/node_modules`, with screenshots written to the scratchpad, not the repository. Do not change the site in this Task unless a check fails, and then only with the Manager's agreement.
+
+### Task 4.4: Trial of a smaller terminal font on phones (added 23 Nov, runs before Task 4.2)
+
+- **Agent:** site-agent
+- **Objective:** On phones, a command should never take more than one line (User, 23 Nov). Build a trial page with a smaller terminal font so the User can judge it on a phone, hosted at `/smaller-term-phone/` on the local server.
+- **Dependencies:** Task 3.3 (Same-Worker)
+- **Output:** An untracked preview in the repository root of the worktree, `smaller-term-phone/`, with its own copy of the site (`index.html`, `style.css` and the content files it fetches), so it opens at `http://localhost:8000/smaller-term-phone/`. Only phone widths (600px or below) change: the terminal's font size is smaller. The preview is never committed and never merged, and the Manager deletes it after the User decides. No change to the site's own files in this Task.
+- **Validation:** Written when the Task is dispatched. It measures, at 360px and 390px, the largest font size at which every command line (`whoami`, `tree`, every `cd` line and `cat` line, from every starting folder, and the error page) fits on one line, and reports it with the longest line and its width. The preview serves two or three sizes the User can compare, for example through a query such as `?fs=15`, and the measured fit. Desktop is unchanged. Contrast is unchanged, because colours are.
+- **Guidance:** Option 2 from the Tracker (a shorter prompt on phones) is not part of this trial unless the User asks. The result feeds Task 4.2. The font size is not animated.
