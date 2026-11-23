@@ -1,0 +1,40 @@
+{
+  "source": "official",
+  "repository": "sdi2200262/agentic-project-management",
+  "releaseVersion": "v1.1.0",
+  "cliVersion": "1.0.3",
+  "assistants": [
+    "claude"
+  ],
+  "assistantNames": {
+    "claude": "Claude Code"
+  },
+  "installedFiles": {
+    "claude": [
+      ".claude/apm-guides/context-gathering.md",
+      ".claude/apm-guides/task-assignment.md",
+      ".claude/apm-guides/task-execution.md",
+      ".claude/apm-guides/task-logging.md",
+      ".claude/apm-guides/task-review.md",
+      ".claude/apm-guides/work-breakdown.md",
+      ".claude/skills/apm-1-initiate-planner/SKILL.md",
+      ".claude/skills/apm-2-initiate-manager/SKILL.md",
+      ".claude/skills/apm-3-initiate-worker/SKILL.md",
+      ".claude/skills/apm-4-check-tasks/SKILL.md",
+      ".claude/skills/apm-5-check-reports/SKILL.md",
+      ".claude/skills/apm-6-handoff-manager/SKILL.md",
+      ".claude/skills/apm-7-handoff-worker/SKILL.md",
+      ".claude/skills/apm-8-summarize-session/SKILL.md",
+      ".claude/skills/apm-9-recover/SKILL.md",
+      ".claude/skills/apm-communication/SKILL.md",
+      ".claude/skills/apm-communication/bus-integration.md"
+    ],
+    "_apm": [
+      ".apm/memory/index.md",
+      ".apm/plan.md",
+      ".apm/spec.md",
+      ".apm/tracker.md"
+    ]
+  },
+  "installedAt": "2026-11-15T21:09:24.692Z"
+}
