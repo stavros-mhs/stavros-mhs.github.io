@@ -730,10 +730,16 @@ html.term-live[data-motion="animated"] .term-move {
         left: calc(100% - 28px);
     }
 
+    /* On a phone the Animations switch is not fixed: it sits in the page's flow, at the bottom of the page and at the right, with
+       space above and below, so it never covers the footnote or any text */
+    footer {
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+    }
+
     .motion-switch {
+        position: static;
         font-size: 0.9rem;
-        right: 0.5rem;
-        bottom: 0.5rem;
     }
 
     .motion-track {
