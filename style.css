@@ -435,9 +435,9 @@ footer {
     outline-offset: 3px;
 }
 
-/* The landing: the terminal sits in the centre of the viewport. The box is at least the viewport tall, and its 72px padding
-   keeps the terminal clear of the navbar's height. On desktop the box starts at the top of the viewport (see below). The mobile
-   block changes the height. Folder and file pages start the terminal at the top instead (.is-top, below) */
+/* The landing, and every folder and file page, start the terminal at the top, just under the navbar: the box is at least the viewport
+   tall, and its 72px padding keeps the terminal clear of the navbar's height. The terminal's top edge is fixed, and it grows only toward
+   the bottom of the screen. Nothing centres it vertically. The mobile block changes the height */
 .landing {
     box-sizing: border-box;
     min-height: 100vh;
@@ -445,11 +445,11 @@ footer {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
 }
 
 /* On desktop the navbar and its bottom margin (72px + 32px) sit above the landing, and the body's bottom padding (32px) sits
-   below it. The landing takes the top space back, so it starts at the top of the viewport and the terminal centres in it. It
+   below it. The landing takes the top space back, so it starts at the top of the viewport and the terminal sits 72px down. It
    also takes the bottom padding back, so the page does not scroll. Phones keep their own layout */
 @media (min-width: 601px) {
     .landing {
@@ -636,11 +636,6 @@ html.term-live[data-motion="animated"] .term-fade {
 .terminal > * {
     scroll-margin-top: 7rem;
     scroll-margin-bottom: 1.5rem;
-}
-
-/* A page that shows a folder or a file starts its terminal at the top, just under the navbar, rather than in the middle */
-.landing.is-top {
-    justify-content: flex-start;
 }
 
 /* The stage holds the terminal's box. It fades as a whole (the .term-fade rule above), and a file page moves it with a transform
