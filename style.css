@@ -651,6 +651,23 @@ html.term-live[data-motion="animated"] .term-move {
     }
 }
 
+/* Light mode: small links use the darker directory colour at rest, so they reach 4.5:1 on the page background (5.64:1; --dir is 3.82:1).
+   This covers the footnote, the phone panel's names, and the navbar names below 24px (below 750px, see below). The 24px names keep --dir.
+   Their hover colour is the same token, so on these items hover changes nothing in colour */
+:root[data-theme="light"] .page-footer a,
+:root[data-theme="light"] .page-footer a:visited,
+:root[data-theme="light"] .ls-panel a,
+:root[data-theme="light"] .ls-panel a:visited {
+    color: var(--dir-hover);
+}
+
+@media (max-width: 749.98px) {
+    :root[data-theme="light"] .nav-container a,
+    :root[data-theme="light"] .nav-container a:visited {
+        color: var(--dir-hover);
+    }
+}
+
 /* The rendered markdown of a file, printed below the terminal. It is page text, so it takes the page's colours */
 .page-content {
     width: 100%;
