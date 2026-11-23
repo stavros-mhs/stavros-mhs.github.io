@@ -685,13 +685,24 @@
                     runActions(actions, onDone || null);
                 }
 
-                // Types a line's text: its first promptLength characters in the prompt colour, the rest in the body colour
+                // A command line: the prompt and the space after it appear together at `start`, since the prompt is the machine's output.
+                // Only the command after them types, one character after a random interval, the first one an interval after `start`.
+                // `text` is the prompt, a space and the command. The first promptLength characters are the prompt, in the prompt colour
                 function typeText(line, text, start, promptLength) {
-                    var actions = [];
+                    var actions = [{ at: start, fn: function (instant) {
+                        line.appendChild(el('span', 'term-prompt', text.slice(0, promptLength)));
+                        var space = el('span', 'term-char', ' ');
+                        line.appendChild(space);
+                        if (!instant) {
+                            ensureCursor();
+                            cursorAfterChar(space);
+                            keepInView(line);
+                        }
+                    } }];
                     var at = start;
-                    Array.from(text).forEach(function (ch, i) {
-                        if (i > 0) at += TYPE_MIN_MS + Math.random() * (TYPE_MAX_MS - TYPE_MIN_MS);
-                        actions.push({ at: at, fn: typeFn(line, ch, i < promptLength ? 'term-prompt' : 'term-char') });
+                    Array.from(text.slice(promptLength + 1)).forEach(function (ch) {
+                        at += TYPE_MIN_MS + Math.random() * (TYPE_MAX_MS - TYPE_MIN_MS);
+                        actions.push({ at: at, fn: typeFn(line, ch, 'term-char') });
                     });
                     return { actions: actions, end: at };
                 }
