@@ -31,7 +31,7 @@
         <nav class="navbar">
             <div class="nav-container">
                 <div class="nav-links">
-                    <a href="#/user/">user/</a> <a href="#/projects/">projects/</a> <a href="#/skills/">skills/</a> <a href="#/contact/">contact/</a>
+                    <a href="#/">~/</a> <a href="#/user/">user/</a> <a href="#/projects/">projects/</a> <a href="#/skills/">skills/</a> <a href="#/contact/">contact/</a>
                 </div>
 
                 <button type="button" class="nav-burger" id="burger" aria-expanded="false" aria-controls="ls-panel" aria-label="Menu" hidden>
@@ -58,7 +58,7 @@
             </div>
 
             <div class="ls-panel" id="ls-panel" hidden>
-                <p class="ls-line">~/</p>
+                <p class="ls-line"><a href="#/">~/</a></p>
                 <p class="ls-line">├── <a href="#/user/">user/</a></p>
                 <p class="ls-line">├── <a href="#/projects/">projects/</a></p>
                 <p class="ls-line">├── <a href="#/skills/">skills/</a></p>
@@ -306,11 +306,6 @@
                     a.setAttribute('href', hashFor(key));
                     a.setAttribute('data-route', key);
                     return a;
-                }
-                function upLine(folder) {
-                    var p = lineEl('');
-                    p.appendChild(routeLink(folder, 'cd ..'));
-                    return p;
                 }
                 // A prompt with the path of its folder. The command that is typed after it goes after the space
                 function promptLine(folder, cls) {
@@ -590,8 +585,18 @@
                     pageContent.hidden = true;
                 }
 
-                // A tree page: the landing (folder is the root, with whoami first), or a folder's tree with its own command
+                // The cd that takes the terminal from one folder to another, as it is typed: .. to the parent, ~ to the root, or the
+                // folder's path from home. null when the terminal is already in that folder
+                function cdCommand(from, to) {
+                    if (from === to) return null;
+                    if (from !== '' && to === parentOf(from)) return 'cd ..';
+                    if (to === '') return 'cd ~';
+                    return 'cd ~/' + to + '/';
+                }
+                // A tree page: the landing (folder is the root, with whoami first), or a folder's tree with its own command. A page in
+                // another folder is reached by a cd, typed in the folder the terminal was in
                 function buildTreePage(folder, animated, landingLines, onDone) {
+                    var from = pageFolder;
                     clearPage();
                     // A tree page shows whole: the stage is opaque and in place, whatever an earlier file page left
                     setStage(1, true);
@@ -603,7 +608,7 @@
                     treeView.hidden = false;
                     output = el('div', 'term-output');
                     output.id = 'term-output';
-                    headerNode = lineEl(folder === '' ? '~/' : folder + '/');
+                    headerNode = lineEl(folder === '' ? '~/' : folder + '/', 'term-head');
                     blankNode = lineEl('', 'term-blank');
                     countNode = lineEl(countText(0, 0));
                     treeView.appendChild(output);
@@ -629,27 +634,42 @@
                         actions = actions.concat(typed2.actions);
                         clock = typed2.end + PAUSE_MS;
                     } else {
-                        var cmd = promptLine('', 'term-cmd');
+                        // In another folder, the cd is typed first, in the folder the terminal was in. Then tree runs where the cd took it
+                        var cdText = cdCommand(from, folder);
+                        var treeAt = 0;
+                        if (cdText !== null) {
+                            var cd = promptLine(from, 'term-cmd');
+                            treeView.insertBefore(cd, output);
+                            if (animated) {
+                                ensureCursor();
+                                cursorAtLineEnd(cd);
+                            }
+                            var typedCd = typeActions(cd, cdText, 0);
+                            actions = actions.concat(typedCd.actions);
+                            treeAt = typedCd.end + PAUSE_MS;
+                        }
+                        var cmd = hidden(promptLine(folder, 'term-cmd'), animated && cdText !== null);
                         treeView.insertBefore(cmd, output);
-                        if (animated) {
+                        if (animated && cdText === null) {
                             ensureCursor();
                             cursorAtLineEnd(cmd);
                         }
-                        var typed = typeActions(cmd, folder === '' ? 'tree' : 'tree ' + folder + '/', 0);
+                        if (cdText !== null) actions.push({ at: treeAt, fn: revealFn(cmd, true) });
+                        var typed = typeActions(cmd, 'tree', treeAt);
                         actions = actions.concat(typed.actions);
                         clock = typed.end + PAUSE_MS;
                     }
                     var rows = syncOutput(animated, clock, landingLines);
                     actions = actions.concat(rows.actions);
-                    var endAt = rows.lastAt;
-                    if (folder !== '') {
-                        var up = hidden(upLine(parentOf(folder)), animated);
-                        treeView.appendChild(up);
-                        endAt += LINE_MS;
-                        actions.push({ at: endAt, fn: revealFn(up, true) });
-                    }
                     treePrompt = hidden(promptLine(folder), animated);
                     treeView.appendChild(treePrompt);
+                    // A folder's footnote goes back to its parent. It sits below the terminal, in the page's content, not in the terminal
+                    var footer = null;
+                    if (folder !== '') {
+                        footer = hidden(footerLine(parentOf(folder)), animated);
+                        pageContent.appendChild(footer);
+                        pageContent.hidden = false;
+                    }
                     if (landingLines) {
                         // The landing's final prompt fades in as the tree starts, and the cursor moves to it once the tree has faded in
                         var treeIn = rows.lastAt + LINE_FADE_MS;
@@ -657,7 +677,9 @@
                         actions.push({ at: treeIn, fn: revealFn(treePrompt, true) });
                         if (animated) navbar.style.setProperty('--drop-delay', (treeIn + NAV_GAP_MS) + 'ms');
                     } else {
-                        actions.push({ at: endAt + LINE_FADE_MS, fn: revealFn(treePrompt, true) });
+                        actions.push({ at: rows.lastAt + LINE_FADE_MS, fn: revealFn(treePrompt, true) });
+                        // The footnote comes once the prompt has faded in
+                        if (footer) actions.push({ at: rows.lastAt + 2 * LINE_FADE_MS, fn: revealFn(footer, false) });
                     }
                     setPath(folder);
                     runActions(actions, onDone || null);
@@ -716,6 +738,8 @@
                 // the last block goes back to the folder that holds the file. Minimal mode shows it all at once
                 function buildFilePage(key, animated) {
                     var folder = folderOf(key);
+                    // The folder the terminal is in now: a file in another folder is reached by a cd, typed first
+                    var from = pageFolder;
                     var c = content[key];
                     var swap = function (instant) {
                         leaveTree();
@@ -726,8 +750,10 @@
                         pageFile = key;
                         fileView.hidden = false;
                         pageContent.hidden = true;
+                        var cdLine = from !== folder ? lineEl('', 'term-cmd') : null;
                         var cmd = lineEl('', 'term-cmd');
                         var end = hidden(promptLine(folder, 'term-cmd'), !instant);
+                        if (cdLine) fileView.appendChild(cdLine);
                         fileView.appendChild(cmd);
                         fileView.appendChild(end);
                         var blocks = c && c.ok ? fileLines(key, c.text) : [lineEl('cat: ' + nameOf(key) + ': No such file or directory')];
@@ -740,8 +766,15 @@
                         setPath(folder, key);
                         setStage(1, instant);
                         // The typing starts once the cat terminal has faded in, and the steps after it are timed from the typing's start
-                        var typed = typeText(cmd, promptText(folder) + ' cat ' + nameOf(key), 0, promptText(folder).length);
-                        var rest = typed.actions;
+                        var rest = [];
+                        var catAt = 0;
+                        if (cdLine) {
+                            var typedCd = typeText(cdLine, promptText(from) + ' ' + cdCommand(from, folder), 0, promptText(from).length);
+                            rest = rest.concat(typedCd.actions);
+                            catAt = typedCd.end + PAUSE_MS;
+                        }
+                        var typed = typeText(cmd, promptText(folder) + ' cat ' + nameOf(key), catAt, promptText(folder).length);
+                        rest = rest.concat(typed.actions);
                         var moveAt = typed.end + PAUSE_MS;
                         var blocksAt = moveAt + MOVE_MS;
                         rest.push({ at: moveAt, fn: moveTo });
@@ -763,7 +796,8 @@
                     runActions([{ at: 0, fn: function (instant) { setStage(0, instant); } }, { at: SWAP_MS + 100, untilFade: true, fn: swap }], null);
                 }
 
-                // An error: the command types at the current folder's prompt, then the message and a cd .. back to the folder
+                // An error: the command types at the current folder's prompt, then the message and the prompt. A footnote below the
+                // terminal goes back to the folder
                 function buildErrorPage(raw, animated) {
                     var folder = pageFolder;
                     clearPage();
@@ -774,12 +808,13 @@
                     fileView.hidden = false;
                     var cmd = promptLine(folder, 'term-cmd');
                     var msg = hidden(lineEl('cd: no such file or directory'), animated);
-                    var up = hidden(upLine(folder), animated);
                     var end = hidden(promptLine(folder, 'term-cmd'), animated);
+                    var footer = hidden(footerLine(folder), animated);
                     fileView.appendChild(cmd);
                     fileView.appendChild(msg);
-                    fileView.appendChild(up);
                     fileView.appendChild(end);
+                    pageContent.appendChild(footer);
+                    pageContent.hidden = false;
                     if (animated) {
                         ensureCursor();
                         cursorAtLineEnd(cmd);
@@ -788,8 +823,8 @@
                     var outStart = typed.end + PAUSE_MS;
                     var actions = typed.actions.concat([
                         { at: outStart, fn: revealFn(msg, false) },
-                        { at: outStart + LINE_MS, fn: revealFn(up, false) },
-                        { at: outStart + LINE_MS + LINE_FADE_MS, fn: revealFn(end, true) }
+                        { at: outStart + LINE_MS, fn: revealFn(end, true) },
+                        { at: outStart + LINE_MS + LINE_FADE_MS, fn: revealFn(footer, false) }
                     ]);
                     setPath(folder);
                     runActions(actions, null);
@@ -957,16 +992,14 @@
                     setHash(key);
                     applyRoute(key, key);
                 }
-                // A click on a folder opens it in place, or closes it if it is open. It becomes the current path either way
+                // A click on a folder opens it in place, or closes it if it is open. Opening a folder only lists it: the terminal does
+                // not move, so the path, the prompt and the address stay where they are
                 function toggleDir(key, link) {
                     userAction();
                     // A click during a file's fade-out finds the tree already gone once the swap has run
                     if (!output) return;
                     var active = document.activeElement;
                     expanded[key] = !expanded[key];
-                    setPath(key);
-                    lastRoute = key;
-                    setHash(key);
                     var animated = isAnimated();
                     var rows = syncOutput(animated, 0, false);
                     runActions(rows.actions, null);

@@ -21,6 +21,7 @@
     --focus: #e8954d;
     --dir: #edab71;
     --dir-hover: #ffcc94;
+    --prompt: #edae77;
 }
 
 body {
@@ -49,6 +50,7 @@ body {
     --focus: #805832;
     --dir: #b5602e;
     --dir-hover: #8f4a1f;
+    --prompt: #934e25;
 }
 
 /* Visually hidden checkbox: it stays in the tab order, so keyboard users can reach the toggle */
@@ -252,10 +254,11 @@ input[type=checkbox]:checked + .display label .circle .moon {
     }
 }
 
+/* The names are 1.5rem, and they scale down with the window below about 750px, so the five names, ~/ included, keep a gap between them */
 .nav-container a {
     color: var(--dir);
     text-decoration: none;
-    font-size: 1.5rem;
+    font-size: min(1.5rem, 3.2vw);
     font-weight: 500;
     transition: color 0.3s;
 }
@@ -451,10 +454,16 @@ footer {
     min-height: 1.6em;
 }
 
-/* The prompt is in the accent colour. It is 24px, which counts as large text, so the accent passes 3:1 on the surface */
+/* The prompt is the size of the terminal's text, so the path matches the command and the counter. It is orange, in its own
+   token, which is the accent lifted or darkened until it passes 4.5:1 on the surface at this size in both themes */
 .term-prompt {
-    color: var(--accent);
-    font-size: 1.5rem;
+    color: var(--prompt);
+    font-size: inherit;
+}
+
+/* The header of a tree is the folder it lists, so it is in the path colour, as the prompt is */
+.term-head {
+    color: var(--prompt);
 }
 
 /* Animated mode: the terminal and the navbar start hidden, so no static text shows before the script has set the timeline.
@@ -615,11 +624,16 @@ html.term-live[data-motion="animated"] .term-move {
     transition: transform 0.4s ease-out;
 }
 
-/* The footer ends a file's markdown: a link to the folder that holds the file, at the end of the column. It uses the directory
-   colour, and on hover the directory's hover colour */
+/* The footnote, "> cd ..": a link back up to a folder, at the right of the page's column, under the markdown or the terminal. It uses
+   the directory colour, and on hover the directory's hover colour */
 .page-footer {
     margin: 1.5rem 0 0;
     text-align: right;
+}
+
+/* A footnote straight under the terminal, with no markdown above it, takes the terminal's spacing instead of its own */
+.page-content > .page-footer:first-child {
+    margin-top: 0;
 }
 
 .page-footer a,
@@ -744,10 +758,18 @@ html.term-live[data-motion="animated"] .term-move {
         padding: 1rem;
     }
 
-    /* A terminal line wider than the phone's box wraps at its spaces, rather than running past the box. The tree lines are
-       short, so they do not wrap */
+    /* A terminal line wider than the phone's box wraps at its spaces, rather than running past the box. Its second line is
+       indented two characters, so the line still reads as one. A word is split only if it is longer than a whole line.
+       The tree lines are short, so they do not wrap */
     .terminal .term-line {
         white-space: pre-wrap;
-        overflow-wrap: anywhere;
+        overflow-wrap: break-word;
+        padding-left: 2ch;
+        text-indent: -2ch;
+    }
+
+    /* The prompt stays on one line, so the path before the command is never split */
+    .terminal .term-prompt {
+        white-space: nowrap;
     }
 }
