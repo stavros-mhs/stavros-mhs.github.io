@@ -647,14 +647,17 @@
                             actions = actions.concat(typedCd.actions);
                             treeAt = typedCd.end + PAUSE_MS;
                         }
-                        var cmd = hidden(promptLine(folder, 'term-cmd'), animated && cdText !== null);
+                        // After a cd, the new prompt is the machine's output: it is in the page at full opacity in one frame (no term-fade class, so no
+                        // transition), once the pause after the cd has passed. The first character of tree follows one typing interval later
+                        var cmd = promptLine(folder, 'term-cmd');
+                        if (animated && cdText !== null) cmd.style.opacity = '0';
                         treeView.insertBefore(cmd, output);
                         if (animated && cdText === null) {
                             ensureCursor();
                             cursorAtLineEnd(cmd);
                         }
                         if (cdText !== null) actions.push({ at: treeAt, fn: revealFn(cmd, true) });
-                        var typed = typeActions(cmd, 'tree', treeAt);
+                        var typed = typeActions(cmd, 'tree', cdText !== null ? treeAt + TYPE_MIN_MS + Math.random() * (TYPE_MAX_MS - TYPE_MIN_MS) : treeAt);
                         actions = actions.concat(typed.actions);
                         clock = typed.end + PAUSE_MS;
                     }
