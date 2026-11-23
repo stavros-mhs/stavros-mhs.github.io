@@ -595,8 +595,9 @@
                     return 'cd ~/' + to + '/';
                 }
                 // A tree page: the landing (folder is the root, with whoami first), or a folder's tree with its own command. A page in
-                // another folder is reached by a cd, typed in the folder the terminal was in
-                function buildTreePage(folder, animated, landingLines, onDone) {
+                // another folder is reached by a cd, typed in the folder the terminal was in. With cdless (Back, Forward, a typed address,
+                // the page a direct load opens) no cd is typed: the page starts at the folder's prompt, and tree types after it
+                function buildTreePage(folder, animated, landingLines, onDone, cdless) {
                     var from = pageFolder;
                     clearPage();
                     pageKind = folder === '' ? 'home' : 'dir';
@@ -632,7 +633,7 @@
                         clock = typed2.end + PAUSE_MS;
                     } else {
                         // In another folder, the cd is typed first, in the folder the terminal was in. Then tree runs where the cd took it
-                        var cdText = cdCommand(from, folder);
+                        var cdText = cdless ? null : cdCommand(from, folder);
                         var treeAt = 0;
                         if (cdText !== null) {
                             var cd = promptLine(from, 'term-cmd');
@@ -655,7 +656,12 @@
                             ensureCursor();
                             cursorAtLineEnd(cmd);
                         }
-                        if (cdText !== null) actions.push({ at: treeAt, fn: revealFn(cmd, true) });
+                        if (cdText !== null) {
+                            actions.push({ at: treeAt, fn: revealFn(cmd, true) });
+                            actions.push({ at: treeAt, fn: releaseHeight });
+                        } else {
+                            releaseHeight();
+                        }
                         var typed = typeActions(cmd, 'tree', animated ? treeAt + typingGap() : treeAt);
                         actions = actions.concat(typed.actions);
                         clock = typed.end + PAUSE_MS;
@@ -718,13 +724,25 @@
                     node.classList.remove('term-fade');
                     node.style.opacity = '';
                 }
+                // The terminal's box keeps the height it had before the click, from the start of the fade-out until the new prompt appears:
+                // a height set from the measured height (a minimum height would let a taller page grow the box) and then released. The
+                // height does not animate. Content that is taller than the box overflows it while it is held: it is hidden (opacity 0) then.
+                // After the release the box follows its content
+                function holdHeight() { terminal.style.height = terminal.getBoundingClientRect().height + 'px'; }
+                function releaseHeight() { terminal.style.height = ''; }
                 function clearThen(build) {
                     var faders = [treeView, fileView, pageContent].filter(function (n) { return !n.hidden && n.childNodes.length; });
                     // The view that holds the terminal's lines ends the clear when its fade ends
                     var gate = treeView.hidden ? fileView : treeView;
                     runActions([
-                        { at: 0, fn: function (instant) { removeCursor(); faders.forEach(function (n) { fadeOut(n, instant); }); } },
-                        { at: SWAP_MS + 100, untilFade: gate, fn: function (instant) { faders.forEach(fadeReset); build(instant); } }
+                        { at: 0, fn: function (instant) { holdHeight(); removeCursor(); faders.forEach(function (n) { fadeOut(n, instant); }); } },
+                        { at: SWAP_MS + 100, untilFade: gate, fn: function (instant) {
+                            faders.forEach(fadeReset);
+                            // The old content is gone, so a page that was scrolled down would jump anyway: scroll to the top at this moment, at once,
+                            // so that the cd and the sequence are in view. The terminal is at the top of the page (72px or 156px down)
+                            if (window.scrollY > 0) window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                            build(instant);
+                        } }
                     ], null);
                 }
                 // The footer ends the markdown: a link to the folder that holds the file
@@ -736,11 +754,13 @@
                 // A file's page. After the screen has cleared, it types its prompt and the command, and the markdown prints below the
                 // terminal one block at a time, starting 300 ms after the command. A footer after the last block goes back to the folder
                 // that holds the file. Instant (a typed address, Back, Forward, minimal mode) shows it all at once
-                function buildFilePage(key, animated) {
+                function buildFilePage(key, animated, click) {
                     var folder = folderOf(key);
                     // The folder the terminal is in now: a file in another folder is reached by a cd, typed first
                     var from = pageFolder;
                     var c = content[key];
+                    // A route with no click (Back, Forward, a typed address, a direct load) types no cd, and does not clear: the page is replaced at once
+                    var cdless = animated && !click;
                     var swap = function (instant) {
                         leaveTree();
                         fileView.textContent = '';
@@ -750,7 +770,7 @@
                         pageFile = key;
                         fileView.hidden = false;
                         pageContent.hidden = true;
-                        var cdLine = from !== folder ? lineEl('', 'term-cmd') : null;
+                        var cdLine = from !== folder && !cdless ? lineEl('', 'term-cmd') : null;
                         var cmd = lineEl('', 'term-cmd');
                         var end = hidden(promptLine(folder, 'term-cmd'), !instant);
                         if (cdLine) fileView.appendChild(cdLine);
@@ -773,8 +793,11 @@
                             rest = rest.concat(typedCd.actions);
                             catAt = typedCd.end + PAUSE_MS;
                         }
+
                         var typed = typeText(cmd, promptText(folder) + ' cat ' + nameOf(key), catAt, promptText(folder).length);
                         rest = rest.concat(typed.actions);
+                        // The box is released when the prompt of the cat line has appeared: this action follows the prompt's, at the same time
+                        rest.push({ at: catAt, fn: releaseHeight });
                         var blocksAt = typed.end + PAUSE_MS;
                         // The container is shown and laid out before its blocks are revealed, so each block fades from opacity 0
                         rest.push({ at: blocksAt, fn: function (instantNow) { pageContent.hidden = false; if (!instantNow) void pageContent.offsetHeight; } });
@@ -784,8 +807,8 @@
                         rest.push({ at: lastAt, fn: revealFn(end, true) });
                         runActions(rest, null, instant);
                     };
-                    if (animated) clearThen(swap);
-                    else swap(true);
+                    if (animated && click) clearThen(swap);
+                    else swap(!animated);
                 }
 
                 // An error: the command types at the current folder's prompt, then the message and the prompt. A footnote below the
@@ -810,7 +833,7 @@
                         ensureCursor();
                         cursorAtLineEnd(cmd);
                     }
-                    var typed = typeActions(cmd, 'cd ' + raw, 0);
+                    var typed = typeActions(cmd, 'cd ' + raw, animated ? typingGap() : 0);
                     var outStart = typed.end + PAUSE_MS;
                     var actions = typed.actions.concat([
                         { at: outStart, fn: revealFn(msg, false) },
@@ -952,32 +975,34 @@
                     pendingInitial = false;
                     flushAll();
                 }
-                // Shows a route: a file's page, or a folder's tree on a page of its own. The home route is the landing's tree. seq is true
-                // for a click: in animated mode it plays the sequence (clear, cd, tree or cat). Otherwise the page changes at once
-                function applyRoute(key, raw, seq) {
-                    var animated = seq && isAnimated();
+                // Shows a route: a file's page, or a folder's tree on a page of its own. The home route is the landing's tree. click is true
+                // for a click: in animated mode it plays the sequence (clear, cd, tree or cat). Without a click (Back, Forward, a typed
+                // address, the page a direct load opens) the old content is replaced at once, and the destination's prompt appears with its
+                // command typed after it, with no cd. Minimal mode shows the page at once
+                function applyRoute(key, raw, click) {
+                    var animated = isAnimated();
                     if (key === null) {
-                        buildErrorPage(raw, false);
+                        buildErrorPage(raw, animated);
                         return;
                     }
                     if (isFile(key)) {
                         if (!content[key]) {
-                            loadFile(key).then(function () { if (lastRoute === key) applyRoute(key, key, seq); });
+                            loadFile(key).then(function () { if (lastRoute === key) applyRoute(key, key, click); });
                             return;
                         }
                         if (pageKind === 'file' && pageFile === key) {
                             setPath(folderOf(key), key);
                             return;
                         }
-                        buildFilePage(key, animated);
+                        buildFilePage(key, animated, click);
                         return;
                     }
                     if ((pageKind === 'home' || pageKind === 'dir') && pageFolder === key) {
                         setPath(key);
                         return;
                     }
-                    if (animated) clearThen(function (instant) { buildTreePage(key, !instant, false, null); });
-                    else buildTreePage(key, false, false, null);
+                    if (animated && click) clearThen(function (instant) { buildTreePage(key, !instant, false, null, false); });
+                    else buildTreePage(key, animated, false, null, animated);
                 }
                 // A click or the navbar: sets the address to the route, and shows it
                 function navigate(key) {
