@@ -14,14 +14,14 @@
     --surface: #4a4a4a;
     --text: #e0ddd8;
     --text-muted: #a8a49e;
-    --accent: #edab71;
+    --accent: #e8954d;
     --link: #d8b78e;
     --link-hover: #f5b06e;
     --rule: #3a3a3a;
     --focus: #e8954d;
     --dir: #edab71;
     --dir-hover: #ffcc94;
-    --prompt: #edab71;
+    --prompt: #edae77;
 }
 
 body {
