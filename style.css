@@ -710,18 +710,6 @@ html.term-live[data-motion="animated"] .term-fade {
     outline-offset: 3px;
 }
 
-/* The terminal box's height transitions, in animated mode only, while the box follows its content (the script sets the height and the
-   duration, 250 or 300 ms). It clips while it moves, so no text is ever outside it. The script clears the height and this class
-   when the move has ended. Minimal mode has no transition at all */
-html[data-motion="animated"] .terminal.term-box-anim {
-    transition: height 0.25s ease-out;
-    overflow: hidden;
-}
-
-html[data-motion="minimal"] .terminal {
-    transition: none;
-}
-
 /* Mobile responsive */
 @media (max-width: 600px) {
     body {

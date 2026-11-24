@@ -239,8 +239,6 @@
                 var TYPE_MIN_MS = 90;      // a typed character follows the one before after a random interval in this range
                 var TYPE_MAX_MS = 170;
                 var SWAP_MS = 250;         // the screen fades out to an empty terminal over this long, when a click moves to another page
-                var CLEAR_BOX_MS = 300;    // then the box resizes to the empty box over this long
-                var ROW_BOX_MS = 250;      // the box grows or shrinks over this long as a row arrives or goes, as long as the row's fade
 
                 var REPO = {
                     aralloc: 'https://github.com/stavros-mhs/aralloc',
@@ -418,7 +416,6 @@
                         entry.fn(true);
                         finishEntry(entry);
                     });
-                    if (list.length) boxRelease();
                 }
 
                 // Typing: one action per character, after a random interval. The first character is at `start`
@@ -444,55 +441,18 @@
                     });
                     return { actions: actions, end: at };
                 }
-                // The terminal's box follows its content. When the content changes by an animated step (the clear, a row arriving, a folder
-                // closing), the box moves from the height on screen now to the height its content then needs, over ms, ease-out (the height
-                // is the one thing that transitions, in animated mode only). It clips while it moves, so no text is ever outside it. When it
-                // has arrived, or when something ends the sequence at once, the box goes back to its natural height, with no height set.
-                // mutate changes the content. Not animated: the change is made at once
-                function boxRelease() {
-                    terminal.classList.remove('term-box-anim');
-                    terminal.style.height = '';
-                    terminal.style.transitionDuration = '';
-                }
-                function boxChange(mutate, animated, ms) {
-                    if (!animated) {
-                        mutate();
-                        boxRelease();
-                        return;
-                    }
-                    // The height on screen now, which may be part-way through an earlier move. It is set as it is, with no transition (the class
-                    // is off), so the earlier move stops where it is and the new one starts from there
-                    var cur = terminal.getBoundingClientRect().height;
-                    terminal.classList.remove('term-box-anim');
-                    terminal.style.height = cur + 'px';
-                    mutate();
-                    terminal.style.height = 'auto';
-                    var target = terminal.getBoundingClientRect().height;
-                    terminal.style.height = cur + 'px';
-                    void terminal.offsetHeight;
-                    if (Math.abs(target - cur) < 0.5) {
-                        boxRelease();
-                        return;
-                    }
-                    terminal.style.transitionDuration = ms + 'ms';
-                    terminal.classList.add('term-box-anim');
-                    terminal.style.height = target + 'px';
-                }
-                terminal.addEventListener('transitionend', function (e) {
-                    if (e.target === terminal && e.propertyName === 'height') boxRelease();
-                });
-                // A line that comes into the box (the prompt after a tree, the message of an error): at once for a prompt, or with its fade
-                // and the box's growth for output. Its fade is the existing 250 ms fade
+                // A line that comes into the box (the prompt after a tree, the message of an error): at once for a prompt, or with its
+                // fade. The line is in the box, with its height, as soon as it is added. Its fade is the existing 250 ms fade
                 function arriveFn(parent, node, cursor) {
                     return function (instant) {
+                        parent.appendChild(node);
                         if (instant) {
-                            parent.appendChild(node);
                             node.classList.remove('term-fade');
                             node.style.opacity = '1';
-                            boxRelease();
                             return;
                         }
-                        boxChange(function () { parent.appendChild(node); hidden(node, true); }, true, ROW_BOX_MS);
+                        hidden(node, true);
+                        void node.offsetHeight;
                         node.style.opacity = '1';
                         keepInView(node);
                         if (cursor) {
@@ -503,7 +463,7 @@
                 }
                 // A line that is revealed: it shows, and the cursor moves to its end if cursor is set. A line that is not counted
                 // here (the header, the blank line and the count) only shows. A row that shows adds itself to the counts
-                function revealFn(node, cursor) {
+                function revealFn(node, cursor, noScroll) {
                     return function (instant) {
                         if (instant) {
                             node.classList.remove('term-fade');
@@ -511,7 +471,7 @@
                         } else {
                             if (!node.isConnected) return;
                             node.style.opacity = '1';
-                            keepInView(node);
+                            if (!noScroll) keepInView(node);
                             if (cursor) {
                                 ensureCursor();
                                 cursorAtLineEnd(node);
@@ -582,80 +542,50 @@
                     }
                     return rowCache[item.key];
                 }
-                // A row that comes in: it is placed in the output where it belongs among the rows that are there, hidden, and then it fades in over
-                // 250 ms as the box grows with it over 250 ms. It adds itself to the counts. The first row also brings the output in
-                function rowArrives(node, wanted, cursorFollows) {
-                    return function (instant) {
-                        if (!output) return;
-                        var place = function () {
-                            if (output.parentNode !== treeView) treeView.appendChild(output);
-                            var ref = null;
-                            for (var j = wanted.indexOf(node) + 1; j < wanted.length; j++) {
-                                if (wanted[j].parentNode === output) { ref = wanted[j]; break; }
-                            }
-                            output.insertBefore(node, ref);
-                            if (!instant) hidden(node, true);
-                        };
-                        if (instant) {
-                            place();
-                            node.classList.remove('term-fade');
-                            node.style.opacity = '1';
-                            boxRelease();
-                        } else {
-                            boxChange(place, true, ROW_BOX_MS);
-                            node.style.opacity = '1';
-                            keepInView(node);
-                            if (cursorFollows === true) {
-                                ensureCursor();
-                                cursorAtLineEnd(node);
-                            } else if (cursorFollows === 'prompt' && treePrompt && treePrompt.isConnected) {
-                                ensureCursor();
-                                cursorAtLineEnd(treePrompt);
-                            }
-                        }
-                        if (node._key !== undefined) {
-                            counted[node._key] = node._kind;
-                            updateCount();
-                        }
-                    };
-                }
-                // Brings the output in line with the open folders. A row that closes is removed, and stops counting at once. A row
-                // that opens is placed hidden, and its reveal comes back as an action at its place in the output. In minimal mode the
-                // rows show at once. cursorFollows moves the cursor along the rows, as the landing does
-                // With lazy (an animated page that is not the landing) a row that opens is not in the page until its turn: it comes in then,
-                // fading in over 250 ms while the box grows with it, so the box is always as tall as what is in it. A row that closes goes at once,
-                // and the box shrinks to fit over 250 ms. cursorFollows is true to move the cursor along the rows, or 'prompt' to keep it at the
-                // prompt after the tree
-                function syncOutput(animated, startAt, cursorFollows, lazy) {
+                // Brings the output in line with the open folders. A row that opens is placed in the output at once, hidden, so the box
+                // takes its height in one step, before any row shows. Its reveal comes back as an action at its place in the output, 120 ms
+                // after the one before, and its fade is 250 ms. A row that closes stops counting at once and fades out over 250 ms. It is
+                // removed when the fade has ended, so the box changes height once, then. In minimal mode the rows show or go at once.
+                // cursorFollows is true to move the cursor along the rows, or 'prompt' to keep it at the prompt after the tree. Rows
+                // reveal without scrolling the page
+                function syncOutput(animated, startAt, cursorFollows) {
                     var items = visibleRows(pageFolder);
                     var wanted = [headerNode].concat(items.map(rowNode), [blankNode, countNode]);
                     var gone = Array.prototype.slice.call(output.children).filter(function (child) { return wanted.indexOf(child) === -1; });
                     var drop = function () {
                         gone.forEach(function (child) {
-                            output.removeChild(child);
-                            if (child._key !== undefined) delete counted[child._key];
+                            if (child.parentNode === output) output.removeChild(child);
                         });
                     };
-                    if (gone.length && lazy) boxChange(drop, true, ROW_BOX_MS);
-                    else drop();
+                    gone.forEach(function (child) { if (child._key !== undefined) delete counted[child._key]; });
+                    var actions = [];
+                    if (gone.length && animated) {
+                        gone.forEach(function (child) {
+                            child.classList.add('term-fade');
+                            child.style.opacity = '0';
+                        });
+                        actions.push({ at: startAt + LINE_FADE_MS, fn: function () { drop(); updateCount(); } });
+                    } else {
+                        drop();
+                    }
                     var fresh = [];
                     var ref = output.firstChild;
                     wanted.forEach(function (node) {
+                        // A row that is fading out stays where it is until it is removed, so the rows around it keep their places
+                        while (ref && gone.indexOf(ref) !== -1) ref = ref.nextSibling;
                         if (node === ref) {
                             ref = ref.nextSibling;
                             return;
                         }
                         if (node.parentNode !== output) fresh.push(node);
-                        if (!lazy) output.insertBefore(node, ref);
+                        output.insertBefore(node, ref);
                     });
-                    var actions = [];
+                    // Every new row is hidden before the one style flush, so no row starts a fade of its own from its visible state
+                    if (animated) fresh.forEach(function (node) { hidden(node, true); });
+                    if (animated && fresh.length) void output.offsetHeight;
                     fresh.forEach(function (node, i) {
-                        if (lazy) {
-                            actions.push({ at: startAt + i * LINE_MS, fn: rowArrives(node, wanted, cursorFollows) });
-                        } else if (animated) {
-                            hidden(node, true);
-                            void node.offsetHeight;
-                            actions.push({ at: startAt + i * LINE_MS, fn: revealFn(node, cursorFollows) });
+                        if (animated) {
+                            actions.push({ at: startAt + i * LINE_MS, fn: revealFn(node, cursorFollows === true, true) });
                         } else {
                             node.style.opacity = '1';
                             if (node._key !== undefined) counted[node._key] = node._kind;
@@ -710,17 +640,13 @@
                     pageFolder = folder;
                     pageFile = null;
                     treeView.hidden = false;
-                    // An animated page that is not the landing is lazy: only what has appeared is in the page, so the box is as tall as its
-                    // content. The output comes in with its first row, and the prompt after the tree comes in last
-                    var lazy = animated && !landingLines;
                     output = el('div', 'term-output');
                     output.id = 'term-output';
                     headerNode = lineEl(folder === '' ? '~/' : folder + '/', 'term-head');
                     blankNode = lineEl('', 'term-blank');
                     countNode = lineEl(countText(0, 0));
-                    if (!lazy) treeView.appendChild(output);
-                    // A line goes before the output when the output is in the page, and at the end when it is not
-                    var putLine = function (node) { treeView.insertBefore(node, output.parentNode === treeView ? output : null); };
+                    treeView.appendChild(output);
+                    var putLine = function (node) { treeView.insertBefore(node, output); };
                     var actions = [];
                     var clock;
                     if (landingLines) {
@@ -761,20 +687,9 @@
                         // After a cd, the new prompt is the machine's output: it is in the page at full opacity in one frame (no term-fade class, so no
                         // transition), once the pause after the cd has passed. The first character of tree follows one typing interval later
                         var cmd = promptLine(folder, 'term-cmd');
-                        if (lazy && cdText !== null) {
-                            // The new prompt comes into the page at once, as one more line in the box
-                            actions.push({ at: treeAt, fn: function (instant) {
-                                boxChange(function () { putLine(cmd); }, false);
-                                if (!instant) {
-                                    ensureCursor();
-                                    cursorAtLineEnd(cmd);
-                                }
-                            } });
-                        } else {
-                            if (animated && cdText !== null) cmd.style.opacity = '0';
-                            putLine(cmd);
-                            if (cdText !== null) actions.push({ at: treeAt, fn: revealFn(cmd, true) });
-                        }
+                        if (animated && cdText !== null) cmd.style.opacity = '0';
+                        putLine(cmd);
+                        if (cdText !== null) actions.push({ at: treeAt, fn: revealFn(cmd, true) });
                         if (animated && cdText === null) {
                             ensureCursor();
                             cursorAtLineEnd(cmd);
@@ -783,10 +698,10 @@
                         actions = actions.concat(typed.actions);
                         clock = typed.end + PAUSE_MS;
                     }
-                    var rows = syncOutput(animated, clock, landingLines, lazy);
+                    var rows = syncOutput(animated, clock, landingLines);
                     actions = actions.concat(rows.actions);
-                    treePrompt = lazy ? promptLine(folder) : hidden(promptLine(folder), animated);
-                    if (!lazy) treeView.appendChild(treePrompt);
+                    treePrompt = hidden(promptLine(folder), animated);
+                    treeView.appendChild(treePrompt);
                     // A folder's footnote goes back to its parent. It sits below the terminal, in the page's content, not in the terminal
                     var footer = null;
                     if (folder !== '') {
@@ -801,7 +716,7 @@
                         actions.push({ at: treeIn, fn: revealFn(treePrompt, true) });
                         if (animated) navbar.style.setProperty('--drop-delay', (treeIn + NAV_GAP_MS) + 'ms');
                     } else {
-                        actions.push({ at: rows.lastAt + LINE_FADE_MS, fn: lazy ? arriveFn(treeView, treePrompt, true) : revealFn(treePrompt, true) });
+                        actions.push({ at: rows.lastAt + LINE_FADE_MS, fn: revealFn(treePrompt, true) });
                         // The footnote comes once the prompt has faded in
                         if (footer) actions.push({ at: rows.lastAt + 2 * LINE_FADE_MS, fn: revealFn(footer, false) });
                     }
@@ -848,14 +763,12 @@
                     runActions([
                         { at: 0, fn: function (instant) { removeCursor(); faders.forEach(function (n) { fadeOut(n, instant); }); } },
                         { at: SWAP_MS + 100, untilFade: gate, fn: function (instant) {
-                            // The old content goes, and the box resizes to the empty box over 300 ms, ease-out: the new page starts with just its first
-                            // prompt, so the box is a prompt line tall. The old text is still in the box, faded out, until this moment
-                            boxChange(function () {
-                                faders.forEach(fadeReset);
-                                // A page that was scrolled down goes to the top at this moment, at once, so that the cd and the sequence are in view
-                                if (window.scrollY > 0) window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-                                build(instant);
-                            }, !instant, CLEAR_BOX_MS);
+                            // The old content goes at this moment, and the box takes the height of the new page in one step. The old text
+                            // stays in the box, faded out, until then
+                            faders.forEach(fadeReset);
+                            // A page that was scrolled down goes to the top at this moment, at once, so that the cd and the sequence are in view
+                            if (window.scrollY > 0) window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                            build(instant);
                         } }
                     ], null);
                 }
@@ -1139,7 +1052,7 @@
                     var active = document.activeElement;
                     expanded[key] = !expanded[key];
                     var animated = isAnimated();
-                    var rows = syncOutput(animated, 0, animated ? 'prompt' : false, animated);
+                    var rows = syncOutput(animated, 0, animated ? 'prompt' : false);
                     runActions(rows.actions, null);
                     if (animated) {
                         ensureCursor();
