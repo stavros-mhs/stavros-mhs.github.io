@@ -844,7 +844,7 @@
                         } }
                     ]), null);
                 }
-                // The footer ends the markdown: a link to the folder that holds the file
+                // A footer line: a link to a folder, with > cd .. as its text
                 function footerLine(folder) {
                     var p = el('p', 'page-footer');
                     var a = routeLink(folder, '> cd ..');
@@ -854,7 +854,7 @@
                 }
                 // A file's page. The terminal holds one line: the prompt of the folder it was in, with cd typed on it when the file is in another
                 // folder, and then the line takes the file's folder prompt and cat is typed on it. The markdown prints below the terminal one block
-                // at a time, starting 300 ms after the command, and a footer after the last block goes back to the folder that holds the file.
+                // at a time, starting 300 ms after the command, and a footer after the last block goes up one folder, as a folder page's footer does.
                 // Instant (a typed address, Back, Forward, minimal mode) shows it all at once
                 function buildFilePage(key, animated, click, typeClear) {
                     var folder = folderOf(key);
@@ -885,7 +885,7 @@
                             hidden(b, !instant);
                             pageContent.appendChild(b);
                         });
-                        var footer = hidden(footerLine(folder), !instant);
+                        var footer = hidden(footerLine(parentOf(folder)), !instant);
                         pageContent.appendChild(footer);
                         setPath(folder, key);
                         var rest = [];
