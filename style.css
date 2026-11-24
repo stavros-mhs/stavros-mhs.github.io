@@ -14,13 +14,14 @@
     --surface: #4a4a4a;
     --text: #e0ddd8;
     --text-muted: #a8a49e;
-    --accent: #e8954d;
+    --accent: #edab71;
     --link: #d8b78e;
     --link-hover: #f5b06e;
     --rule: #3a3a3a;
     --focus: #e8954d;
     --dir: #edab71;
     --dir-hover: #ffcc94;
+    --prompt: #edae77;
 }
 
 body {
@@ -49,6 +50,7 @@ body {
     --focus: #805832;
     --dir: #b5602e;
     --dir-hover: #8f4a1f;
+    --prompt: #934e25;
 }
 
 /* Visually hidden checkbox: it stays in the tab order, so keyboard users can reach the toggle */
@@ -142,15 +144,20 @@ input[type=checkbox]:checked + .display label .circle .moon {
     opacity: 0;
 }
 
-/* Animations switch: a button in the navbar, styled to match the theme toggle */
+/* Animations switch: a button fixed at the bottom right, styled to match the theme toggle. The label "Animations" is on top, as wide
+   as the track: its font size is the track's width over six (ten characters of JetBrains Mono, 0.6em each). The state, ON or OFF, is
+   inside the track, on the side the knob has left */
 .motion-switch {
+    --switch-w: 80px;      /* the track's width, and the label's */
+    --knob-space: 36px;    /* the knob's width and its two 4px gaps' share: the free part of the track is 100% minus this */
     display: inline-flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.6rem;
+    gap: 0.35rem;
     margin: 0;
-    padding: 0.4rem 0.6rem;
+    padding: 0.5rem 0.75rem 0.6rem;
     border: 0;
-    border-radius: 999px;
+    border-radius: 16px;
     background: var(--bg);
     position: fixed;
     right: 1rem;
@@ -167,11 +174,10 @@ input[type=checkbox]:checked + .display label .circle .moon {
     display: none;
 }
 
-/* The visible state word: a fixed width, so the navbar does not shift between On and Off */
-.motion-state {
-    display: inline-block;
-    min-width: 2.2em;
-    text-align: left;
+.motion-label {
+    font-size: calc(var(--switch-w) / 6);
+    line-height: 1.2;
+    white-space: nowrap;
 }
 
 /* Focus ring, shown for keyboard focus, as on the theme toggle */
@@ -183,11 +189,37 @@ input[type=checkbox]:checked + .display label .circle .moon {
 .motion-track {
     position: relative;
     display: inline-block;
-    width: 80px;
+    width: var(--switch-w);
     height: 40px;
     border-radius: 999px;
     background: var(--surface);
     box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* The state word fills the free part of the track, the part the knob has left, and is centred in it. It is aria-hidden: the
+   button's state is aria-checked. The text swaps with no animation */
+.motion-state {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: calc(100% - var(--knob-space));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text);
+    font-size: calc(var(--switch-w) * 0.15);
+    font-weight: 500;
+    line-height: 1;
+    pointer-events: none;
+}
+
+/* Animations on: the knob is on the right, so ON is on the left. Off: the knob is on the left, so OFF is on the right */
+.motion-switch[aria-checked="true"] .motion-state {
+    left: 0;
+}
+
+.motion-switch[aria-checked="false"] .motion-state {
+    right: 0;
 }
 
 .motion-knob {
@@ -252,10 +284,11 @@ input[type=checkbox]:checked + .display label .circle .moon {
     }
 }
 
+/* The names are 1.5rem, and they scale down with the window below about 750px, so the five names, ~/ included, keep a gap between them */
 .nav-container a {
     color: var(--dir);
     text-decoration: none;
-    font-size: 1.5rem;
+    font-size: min(1.5rem, 3.2vw);
     font-weight: 500;
     transition: color 0.3s;
 }
@@ -402,9 +435,9 @@ footer {
     outline-offset: 3px;
 }
 
-/* The landing: the terminal sits in the centre of the viewport. The box is at least the viewport tall, and its 72px padding
-   keeps the terminal clear of the navbar's height. On desktop the box starts at the top of the viewport (see below). The mobile
-   block changes the height. Folder and file pages start the terminal at the top instead (.is-top, below) */
+/* The landing, and every folder and file page, start the terminal at the top, just under the navbar: the box is at least the viewport
+   tall, and its 72px padding keeps the terminal clear of the navbar's height. The terminal's top edge is fixed, and it grows only toward
+   the bottom of the screen. Nothing centres it vertically. The mobile block changes the height */
 .landing {
     box-sizing: border-box;
     min-height: 100vh;
@@ -412,11 +445,11 @@ footer {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
 }
 
 /* On desktop the navbar and its bottom margin (72px + 32px) sit above the landing, and the body's bottom padding (32px) sits
-   below it. The landing takes the top space back, so it starts at the top of the viewport and the terminal centres in it. It
+   below it. The landing takes the top space back, so it starts at the top of the viewport and the terminal sits 72px down. It
    also takes the bottom padding back, so the page does not scroll. Phones keep their own layout */
 @media (min-width: 601px) {
     .landing {
@@ -445,16 +478,27 @@ footer {
     margin-top: 0.5rem;
 }
 
+/* An output with no lines holds no space: the box holds only the lines that are there */
+.term-output:empty {
+    margin-top: 0;
+}
+
 /* A blank line, in the output or the panel, takes a line's height and holds no characters */
 .term-blank,
 .ls-blank {
     min-height: 1.6em;
 }
 
-/* The prompt is in the accent colour. It is 24px, which counts as large text, so the accent passes 3:1 on the surface */
+/* The prompt is the size of the terminal's text, so the path matches the command and the counter. It is orange, in its own
+   token, which is the accent lifted or darkened until it passes 4.5:1 on the surface at this size in both themes */
 .term-prompt {
-    color: var(--accent);
-    font-size: 1.5rem;
+    color: var(--prompt);
+    font-size: inherit;
+}
+
+/* The header of a tree is the folder it lists, so it is in the path colour, as the prompt is */
+.term-head {
+    color: var(--prompt);
 }
 
 /* Animated mode: the terminal and the navbar start hidden, so no static text shows before the script has set the timeline.
@@ -599,9 +643,55 @@ html.term-live[data-motion="animated"] .term-fade {
     scroll-margin-bottom: 1.5rem;
 }
 
-/* A page that shows a folder or a file starts its terminal at the top, just under the navbar, rather than in the middle */
-.landing.is-top {
-    justify-content: flex-start;
+/* The stage holds the terminal's box. It does not fade or move: a click that moves to another page fades the content out (the
+   .term-fade rule above), and the box stays where it is */
+.term-stage {
+    width: 100%;
+    max-width: 760px;
+}
+
+/* The footnote, "> cd ..": a link back up to a folder, at the right of the page's column, under the markdown or the terminal. It uses
+   the directory colour, and on hover the directory's hover colour */
+.page-footer {
+    margin: 1.5rem 0 0;
+    text-align: right;
+}
+
+/* A footnote straight under the terminal, with no markdown above it, takes the terminal's spacing instead of its own */
+.page-content > .page-footer:first-child {
+    margin-top: 0;
+}
+
+.page-footer a,
+.page-footer a:visited {
+    color: var(--dir);
+}
+
+.page-footer a:active {
+    color: var(--dir-hover);
+}
+
+@media (hover: hover) {
+    .page-footer a:hover {
+        color: var(--dir-hover);
+    }
+}
+
+/* Light mode: small links use the darker directory colour at rest, so they reach 4.5:1 on the page background (5.64:1; --dir is 3.82:1).
+   This covers the footnote, the phone panel's names, and the navbar names below 24px (below 750px, see below). The 24px names keep --dir.
+   Their hover colour is the same token, so on these items hover changes nothing in colour */
+:root[data-theme="light"] .page-footer a,
+:root[data-theme="light"] .page-footer a:visited,
+:root[data-theme="light"] .ls-panel a,
+:root[data-theme="light"] .ls-panel a:visited {
+    color: var(--dir-hover);
+}
+
+@media (max-width: 749.98px) {
+    :root[data-theme="light"] .nav-container a,
+    :root[data-theme="light"] .nav-container a:visited {
+        color: var(--dir-hover);
+    }
 }
 
 /* The rendered markdown of a file, printed below the terminal. It is page text, so it takes the page's colours */
@@ -666,14 +756,20 @@ html.term-live[data-motion="animated"] .term-fade {
         left: calc(100% - 28px);
     }
 
+    /* On a phone the Animations switch is not fixed: it sits in the page's flow, at the bottom of the page and at the right, with
+       space above and below, so it never covers the footnote or any text */
+    footer {
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+    }
+
     .motion-switch {
-        font-size: 0.9rem;
-        right: 0.5rem;
-        bottom: 0.5rem;
+        --switch-w: 60px;
+        --knob-space: 28px;
+        position: static;
     }
 
     .motion-track {
-        width: 60px;
         height: 30px;
     }
 
@@ -711,10 +807,18 @@ html.term-live[data-motion="animated"] .term-fade {
         padding: 1rem;
     }
 
-    /* A terminal line wider than the phone's box wraps at its spaces, rather than running past the box. The tree lines are
-       short, so they do not wrap */
+    /* A terminal line wider than the phone's box wraps at its spaces, rather than running past the box. Its second line is
+       indented two characters, so the line still reads as one. A word is split only if it is longer than a whole line.
+       The tree lines are short, so they do not wrap */
     .terminal .term-line {
         white-space: pre-wrap;
-        overflow-wrap: anywhere;
+        overflow-wrap: break-word;
+        padding-left: 2ch;
+        text-indent: -2ch;
+    }
+
+    /* The prompt stays on one line, so the path before the command is never split */
+    .terminal .term-prompt {
+        white-space: nowrap;
     }
 }
