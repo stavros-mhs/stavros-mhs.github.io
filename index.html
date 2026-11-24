@@ -416,6 +416,7 @@
                         entry.fn(true);
                         finishEntry(entry);
                     });
+                    if (list.length) boxRelease();
                 }
 
                 // Typing: one action per character, after a random interval. The first character is at `start`
@@ -441,18 +442,76 @@
                     });
                     return { actions: actions, end: at };
                 }
-                // A line that comes into the box (the prompt after a tree, the message of an error): at once for a prompt, or with its
-                // fade. The line is in the box, with its height, as soon as it is added. Its fade is the existing 250 ms fade
-                function arriveFn(parent, node, cursor) {
+                // The terminal's box always fits its content. A change to the content is a step, and the box takes the height of the content
+                // after it. A shrink is at once, so a box never keeps the height of an earlier page. A growth is at once in variant B, and in
+                // variant A (the preview's style adds the transition) the box moves to its new height over the transition. mutate makes the
+                // change. The box is held at its old height only while its transition runs; then it is released to its natural height
+                var boxStepId = 0;
+                function boxRelease() {
+                    terminal.classList.remove('term-box-anim');
+                    terminal.style.height = '';
+                }
+                function boxStep(mutate, animated) {
+                    if (!animated) {
+                        mutate();
+                        boxRelease();
+                        return;
+                    }
+                    var cur = terminal.getBoundingClientRect().height;
+                    terminal.classList.remove('term-box-anim');
+                    terminal.style.height = cur + 'px';
+                    mutate();
+                    terminal.style.height = 'auto';
+                    var target = terminal.getBoundingClientRect().height;
+                    if (target < cur - 0.5) {
+                        boxRelease();
+                        return;
+                    }
+                    terminal.style.height = cur + 'px';
+                    void terminal.offsetHeight;
+                    if (Math.abs(target - cur) < 0.5) {
+                        boxRelease();
+                        return;
+                    }
+                    var id = ++boxStepId;
+                    terminal.classList.add('term-box-anim');
+                    terminal.style.height = target + 'px';
+                    if (parseFloat(getComputedStyle(terminal).transitionDuration) === 0) {
+                        boxRelease();
+                        return;
+                    }
+                    terminal.__stepId = id;
+                    // The release comes at the end of the transition. If that event does not come, a timer ends it
+                    setTimeout(function () { if (terminal.__stepId === id) boxRelease(); }, 400);
+                }
+                terminal.addEventListener('transitionend', function (e) {
+                    if (e.target === terminal && e.propertyName === 'height' && terminal.__stepId === boxStepId) boxRelease();
+                });
+                // A prompt starts a new line of the terminal. It appears at once, and the box takes its height with it, as one step. In
+                // animated mode a growth is the transition of variant A. A new line is placed before `before`, or at the end
+                function promptArrives(parent, node, before, animated) {
                     return function (instant) {
-                        parent.appendChild(node);
+                        boxStep(function () { parent.insertBefore(node, before); }, animated && !instant);
+                        node.classList.remove('term-fade');
+                        node.style.opacity = '1';
+                        if (animated && !instant) {
+                            ensureCursor();
+                            cursorAtLineEnd(node);
+                        }
+                    };
+                }
+                // A line comes into the box: it is put in before `before`, or at the end, and the box takes its height as one step. Its fade
+                // is the existing 250 ms fade. An instant arrival shows the line at once
+                function arriveFn(parent, node, cursor, before) {
+                    var place = function () { if (before) parent.insertBefore(node, before); else parent.appendChild(node); };
+                    return function (instant) {
                         if (instant) {
+                            boxStep(place, false);
                             node.classList.remove('term-fade');
                             node.style.opacity = '1';
                             return;
                         }
-                        hidden(node, true);
-                        void node.offsetHeight;
+                        boxStep(function () { place(); hidden(node, true); }, true);
                         node.style.opacity = '1';
                         keepInView(node);
                         if (cursor) {
@@ -542,57 +601,63 @@
                     }
                     return rowCache[item.key];
                 }
-                // Brings the output in line with the open folders. A row that opens is placed in the output at once, hidden, so the box
-                // takes its height in one step, before any row shows. Its reveal comes back as an action at its place in the output, 120 ms
-                // after the one before, and its fade is 250 ms. A row that closes stops counting at once and fades out over 250 ms. It is
-                // removed when the fade has ended, so the box changes height once, then. In minimal mode the rows show or go at once.
-                // cursorFollows is true to move the cursor along the rows, or 'prompt' to keep it at the prompt after the tree. Rows
-                // reveal without scrolling the page
+                // A line of the output arrives: it goes into the output where it belongs among the lines that are there, hidden, and the box
+                // takes its height with it, as one step. Then it fades in over 250 ms. A row that shows adds itself to the counts. A row
+                // that opens by a click on its folder does not scroll the page
+                function rowArrives(node, wanted, cursorFollows) {
+                    return function (instant) {
+                        if (!output) return;
+                        var place = function () {
+                            if (output.parentNode !== treeView) treeView.appendChild(output);
+                            var ref = null;
+                            for (var j = wanted.indexOf(node) + 1; j < wanted.length; j++) {
+                                if (wanted[j].parentNode === output) { ref = wanted[j]; break; }
+                            }
+                            output.insertBefore(node, ref);
+                        };
+                        if (instant) {
+                            boxStep(place, false);
+                            node.classList.remove('term-fade');
+                            node.style.opacity = '1';
+                        } else {
+                            boxStep(function () { place(); hidden(node, true); }, true);
+                            node.style.opacity = '1';
+                            if (cursorFollows !== 'prompt') keepInView(node);
+                            if (cursorFollows === true) {
+                                ensureCursor();
+                                cursorAtLineEnd(node);
+                            } else if (cursorFollows === 'prompt' && treePrompt && treePrompt.isConnected) {
+                                ensureCursor();
+                                cursorAtLineEnd(treePrompt);
+                            }
+                        }
+                        if (node._key !== undefined) counted[node._key] = node._kind;
+                        updateCount();
+                    };
+                }
+                // Brings the output in line with the open folders. Its lines arrive one at a time, 120 ms apart, each as rowArrives sets
+                // them, and the box grows with each. A row that closes fades out over 250 ms and is removed after its fade, so the box
+                // shrinks with it. cursorFollows is true to move the cursor along the rows, or 'prompt' to keep it at the prompt after the
+                // tree. In minimal mode the change is at once
                 function syncOutput(animated, startAt, cursorFollows) {
                     var items = visibleRows(pageFolder);
                     var wanted = [headerNode].concat(items.map(rowNode), [blankNode, countNode]);
                     var gone = Array.prototype.slice.call(output.children).filter(function (child) { return wanted.indexOf(child) === -1; });
-                    var drop = function () {
-                        gone.forEach(function (child) {
-                            if (child.parentNode === output) output.removeChild(child);
-                        });
-                    };
                     gone.forEach(function (child) { if (child._key !== undefined) delete counted[child._key]; });
                     var actions = [];
-                    if (gone.length && animated) {
-                        gone.forEach(function (child) {
-                            child.classList.add('term-fade');
-                            child.style.opacity = '0';
-                        });
-                        actions.push({ at: startAt + LINE_FADE_MS, fn: function () { drop(); updateCount(); } });
-                    } else {
-                        drop();
-                    }
-                    var fresh = [];
-                    var ref = output.firstChild;
-                    wanted.forEach(function (node) {
-                        // A row that is fading out stays where it is until it is removed, so the rows around it keep their places
-                        while (ref && gone.indexOf(ref) !== -1) ref = ref.nextSibling;
-                        if (node === ref) {
-                            ref = ref.nextSibling;
-                            return;
-                        }
-                        if (node.parentNode !== output) fresh.push(node);
-                        output.insertBefore(node, ref);
+                    gone.forEach(function (child, i) {
+                        var at = startAt + i * LINE_MS;
+                        actions.push({ at: at, fn: function () { child.classList.add('term-fade'); child.style.opacity = '0'; } });
+                        actions.push({ at: at + LINE_FADE_MS, fn: function (instant) {
+                            boxStep(function () { if (child.parentNode === output) output.removeChild(child); }, animated && !instant);
+                            updateCount();
+                        } });
                     });
-                    // Every new row is hidden before the one style flush, so no row starts a fade of its own from its visible state
-                    if (animated) fresh.forEach(function (node) { hidden(node, true); });
-                    if (animated && fresh.length) void output.offsetHeight;
+                    var fresh = wanted.filter(function (node) { return node.parentNode !== output; });
                     fresh.forEach(function (node, i) {
-                        if (animated) {
-                            actions.push({ at: startAt + i * LINE_MS, fn: revealFn(node, cursorFollows === true, true) });
-                        } else {
-                            node.style.opacity = '1';
-                            if (node._key !== undefined) counted[node._key] = node._kind;
-                        }
+                        actions.push({ at: startAt + i * LINE_MS, fn: rowArrives(node, wanted, cursorFollows) });
                     });
-                    updateCount();
-                    var lastAt = fresh.length ? startAt + (fresh.length - 1) * LINE_MS : startAt;
+                    var lastAt = startAt + Math.max(0, fresh.length - 1) * LINE_MS;
                     return { actions: actions, lastAt: lastAt };
                 }
 
@@ -630,9 +695,10 @@
                     if (to === '') return 'cd ~';
                     return 'cd ~/' + to + '/';
                 }
-                // A tree page: the landing (folder is the root, with whoami first), or a folder's tree with its own command. A page in
-                // another folder is reached by a cd, typed in the folder the terminal was in. With cdless (Back, Forward, a typed address,
-                // the page a direct load opens) no cd is typed: the page starts at the folder's prompt, and tree types after it
+                // A tree page: the landing (folder is the root, with whoami first), or a folder's tree with its own command. The terminal holds
+                // one line: the prompt of the folder it was in, with cd typed on it when the page is in another folder. The line then takes
+                // the new folder's prompt, and tree is typed on it. Its listing arrives line by line. With cdless (Back, Forward, a typed
+                // address, the page a direct load opens) no cd is typed: the line is the folder's prompt, and tree is typed on it
                 function buildTreePage(folder, animated, landingLines, onDone, cdless) {
                     var from = pageFolder;
                     clearPage();
@@ -646,16 +712,12 @@
                     blankNode = lineEl('', 'term-blank');
                     countNode = lineEl(countText(0, 0));
                     treeView.appendChild(output);
-                    var putLine = function (node) { treeView.insertBefore(node, output); };
                     var actions = [];
                     var clock;
                     if (landingLines) {
+                        // The landing starts with one line, its first prompt. Its commands and output arrive one line at a time
                         var cmd1 = promptLine('', 'term-cmd');
-                        var printed = hidden(lineEl('stavros-mhs'), animated);
-                        var cmd2 = hidden(promptLine('', 'term-cmd'), animated);
                         treeView.insertBefore(cmd1, output);
-                        treeView.insertBefore(printed, output);
-                        treeView.insertBefore(cmd2, output);
                         if (animated) {
                             ensureCursor();
                             cursorAtLineEnd(cmd1);
@@ -663,45 +725,39 @@
                         var typed1 = typeActions(cmd1, 'whoami', animated ? FADE_MS + AFTER_FADE_MS : 0);
                         actions = actions.concat(typed1.actions);
                         var outputAt = typed1.end + PAUSE_MS;
-                        actions.push({ at: outputAt, fn: revealFn(printed, false) });
-                        actions.push({ at: outputAt, fn: revealFn(cmd2, true) });
+                        actions.push({ at: outputAt, fn: arriveFn(treeView, lineEl('stavros-mhs'), false, output) });
+                        var cmd2 = promptLine('', 'term-cmd');
+                        actions.push({ at: outputAt, fn: arriveFn(treeView, cmd2, true, output) });
                         var typed2 = typeActions(cmd2, 'tree', outputAt + PROMPT_PAUSE_MS);
                         actions = actions.concat(typed2.actions);
                         clock = typed2.end + PAUSE_MS;
                     } else {
-                        // In another folder, the cd is typed first, in the folder the terminal was in. Then tree runs where the cd took it
+                        // The one line: the prompt of the folder the terminal is in, with the cd typed on it when the page is in another folder.
+                        // The cd line stays. The folder's prompt appears on the line below it, and tree is typed on that line
                         var cdText = cdless ? null : cdCommand(from, folder);
-                        var treeAt = 0;
-                        if (cdText !== null) {
-                            var cd = promptLine(from, 'term-cmd');
-                            putLine(cd);
-                            if (animated) {
-                                ensureCursor();
-                                cursorAtLineEnd(cd);
-                            }
-                            // The prompt is in the page at once, and the first character of the cd follows one typing interval later
-                            var typedCd = typeActions(cd, cdText, animated ? typingGap() : 0);
-                            actions = actions.concat(typedCd.actions);
-                            treeAt = typedCd.end + PAUSE_MS;
-                        }
-                        // After a cd, the new prompt is the machine's output: it is in the page at full opacity in one frame (no term-fade class, so no
-                        // transition), once the pause after the cd has passed. The first character of tree follows one typing interval later
-                        var cmd = promptLine(folder, 'term-cmd');
-                        if (animated && cdText !== null) cmd.style.opacity = '0';
-                        putLine(cmd);
-                        if (cdText !== null) actions.push({ at: treeAt, fn: revealFn(cmd, true) });
-                        if (animated && cdText === null) {
+                        var line = promptLine(cdText !== null ? from : folder, 'term-cmd');
+                        treeView.insertBefore(line, output);
+                        if (animated) {
                             ensureCursor();
-                            cursorAtLineEnd(cmd);
+                            cursorAtLineEnd(line);
                         }
-                        var typed = typeActions(cmd, 'tree', animated ? treeAt + typingGap() : treeAt);
+                        var at = 0;
+                        var cmdLine = line;
+                        if (cdText !== null) {
+                            var typedCd = typeActions(line, cdText, animated ? typingGap() : 0);
+                            actions = actions.concat(typedCd.actions);
+                            at = typedCd.end + PAUSE_MS;
+                            cmdLine = promptLine(folder, 'term-cmd');
+                            actions.push({ at: at, fn: promptArrives(treeView, cmdLine, output, animated) });
+                        }
+                        // Every folder types plain tree on its prompt
+                        var typed = typeActions(cmdLine, 'tree', animated ? at + typingGap() : at);
                         actions = actions.concat(typed.actions);
                         clock = typed.end + PAUSE_MS;
                     }
                     var rows = syncOutput(animated, clock, landingLines);
                     actions = actions.concat(rows.actions);
                     treePrompt = hidden(promptLine(folder), animated);
-                    treeView.appendChild(treePrompt);
                     // A folder's footnote goes back to its parent. It sits below the terminal, in the page's content, not in the terminal
                     var footer = null;
                     if (folder !== '') {
@@ -710,14 +766,13 @@
                         pageContent.hidden = false;
                     }
                     if (landingLines) {
-                        // The landing's final prompt fades in as the tree starts, and the cursor moves to it once the tree has faded in
+                        // The landing's final prompt arrives after its output, and the navbar drops after it
                         var treeIn = rows.lastAt + LINE_FADE_MS;
-                        actions.push({ at: clock, fn: revealFn(treePrompt, false) });
-                        actions.push({ at: treeIn, fn: revealFn(treePrompt, true) });
+                        actions.push({ at: treeIn, fn: arriveFn(treeView, treePrompt, true) });
                         if (animated) navbar.style.setProperty('--drop-delay', (treeIn + NAV_GAP_MS) + 'ms');
                     } else {
-                        actions.push({ at: rows.lastAt + LINE_FADE_MS, fn: revealFn(treePrompt, true) });
-                        // The footnote comes once the prompt has faded in
+                        actions.push({ at: rows.lastAt + LINE_FADE_MS, fn: arriveFn(treeView, treePrompt, true) });
+                        // The footnote comes once the prompt has arrived
                         if (footer) actions.push({ at: rows.lastAt + 2 * LINE_FADE_MS, fn: revealFn(footer, false) });
                     }
                     setPath(folder);
@@ -745,9 +800,6 @@
                     });
                     return { actions: actions, end: at };
                 }
-                // The screen clears when a click moves to another page: the terminal's content, the markdown and the footnote fade out
-                // together over SWAP_MS to an empty terminal, whose box stays where it is. Then build runs, with instant true if a click
-                // or a key ended the fade early. The cursor goes first, since it is not part of the content
                 function fadeOut(node, instant) {
                     if (!instant) node.classList.add('term-fade');
                     node.style.opacity = '0';
@@ -756,34 +808,55 @@
                     node.classList.remove('term-fade');
                     node.style.opacity = '';
                 }
-                function clearThen(build) {
+                // The line the prompt is on: the last line of the terminal that has a prompt
+                function currentPromptLine() {
+                    var lines = terminal.querySelectorAll('.term-line');
+                    for (var i = lines.length - 1; i >= 0; i--) {
+                        if (lines[i].querySelector('.term-prompt')) return lines[i];
+                    }
+                    return null;
+                }
+                // The screen clears when a click moves to another page: the content fades out over SWAP_MS, and then build runs. A click on
+                // the footnote first types clear on the current prompt, at human pace. When build runs, the content is replaced in one step,
+                // and the box holds the new page's first line
+                function clearThen(build, typeClear) {
+                    var pre = [];
+                    var at = 0;
+                    var line = typeClear ? currentPromptLine() : null;
+                    if (line) {
+                        var typedClear = typeActions(line, 'clear', 0);
+                        pre = typedClear.actions;
+                        at = typedClear.end + PAUSE_MS;
+                    }
                     var faders = [treeView, fileView, pageContent].filter(function (n) { return !n.hidden && n.childNodes.length; });
                     // The view that holds the terminal's lines ends the clear when its fade ends
                     var gate = treeView.hidden ? fileView : treeView;
-                    runActions([
-                        { at: 0, fn: function (instant) { removeCursor(); faders.forEach(function (n) { fadeOut(n, instant); }); } },
-                        { at: SWAP_MS + 100, untilFade: gate, fn: function (instant) {
-                            // The old content goes at this moment, and the box takes the height of the new page in one step. The old text
-                            // stays in the box, faded out, until then
-                            faders.forEach(fadeReset);
-                            // A page that was scrolled down goes to the top at this moment, at once, so that the cd and the sequence are in view
-                            if (window.scrollY > 0) window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-                            build(instant);
+                    runActions(pre.concat([
+                        { at: at, fn: function (instant) { removeCursor(); faders.forEach(function (n) { fadeOut(n, instant); }); } },
+                        { at: at + SWAP_MS + 100, untilFade: gate, fn: function (instant) {
+                            boxStep(function () {
+                                faders.forEach(fadeReset);
+                                // A page that was scrolled down goes to the top at this moment, at once, so that the cd and the sequence are in view
+                                if (window.scrollY > 0) window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                                build(instant);
+                            }, !instant);
                         } }
-                    ], null);
+                    ]), null);
                 }
                 // The footer ends the markdown: a link to the folder that holds the file
                 function footerLine(folder) {
                     var p = el('p', 'page-footer');
-                    p.appendChild(routeLink(folder, '> cd ..'));
+                    var a = routeLink(folder, '> cd ..');
+                    a.setAttribute('data-footnote', '');
+                    p.appendChild(a);
                     return p;
                 }
-                // A file's page. After the screen has cleared, it types its prompt and the command, and the markdown prints below the
-                // terminal one block at a time, starting 300 ms after the command. A footer after the last block goes back to the folder
-                // that holds the file. Instant (a typed address, Back, Forward, minimal mode) shows it all at once
-                function buildFilePage(key, animated, click) {
+                // A file's page. The terminal holds one line: the prompt of the folder it was in, with cd typed on it when the file is in another
+                // folder, and then the line takes the file's folder prompt and cat is typed on it. The markdown prints below the terminal one block
+                // at a time, starting 300 ms after the command, and a footer after the last block goes back to the folder that holds the file.
+                // Instant (a typed address, Back, Forward, minimal mode) shows it all at once
+                function buildFilePage(key, animated, click, typeClear) {
                     var folder = folderOf(key);
-                    // The folder the terminal is in now: a file in another folder is reached by a cd, typed first
                     var from = pageFolder;
                     var c = content[key];
                     // A route with no click (Back, Forward, a typed address, a direct load) types no cd, and does not clear: the page is replaced at once
@@ -797,12 +870,14 @@
                         pageFile = key;
                         fileView.hidden = false;
                         pageContent.hidden = true;
-                        var cdLine = from !== folder && !cdless ? lineEl('', 'term-cmd') : null;
-                        var cmd = lineEl('', 'term-cmd');
+                        var cdNeeded = !cdless && from !== folder;
+                        var line = promptLine(cdNeeded ? from : folder, 'term-cmd');
+                        fileView.appendChild(line);
+                        if (!instant) {
+                            ensureCursor();
+                            cursorAtLineEnd(line);
+                        }
                         var end = promptLine(folder, 'term-cmd');
-                        if (cdLine) fileView.appendChild(cdLine);
-                        fileView.appendChild(cmd);
-                        // The prompt after the file comes in last, with the markdown: in the page then, so the box is as tall as its content
                         if (instant) fileView.appendChild(end);
                         var blocks = c && c.ok ? fileLines(key, c.text) : [lineEl('cat: ' + nameOf(key) + ': No such file or directory')];
                         blocks.forEach(function (b) {
@@ -812,21 +887,19 @@
                         var footer = hidden(footerLine(folder), !instant);
                         pageContent.appendChild(footer);
                         setPath(folder, key);
-                        // The prompts appear at once, and each command types an interval after its prompt. The cat line's prompt appears
-                        // 300 ms after the cd. The markdown starts 300 ms after the cat command
                         var rest = [];
-                        var catAt = 0;
-                        if (cdLine) {
-                            var typedCd = typeText(cdLine, promptText(from) + ' ' + cdCommand(from, folder), 0, promptText(from).length);
+                        var at = 0;
+                        var cmdLine = line;
+                        if (cdNeeded) {
+                            var typedCd = typeActions(line, cdCommand(from, folder), instant ? 0 : typingGap());
                             rest = rest.concat(typedCd.actions);
-                            catAt = typedCd.end + PAUSE_MS;
+                            at = typedCd.end + PAUSE_MS;
+                            // The cd line stays. The file's folder prompt is on the line below it, and cat is typed there
+                            cmdLine = promptLine(folder, 'term-cmd');
+                            rest.push({ at: at, fn: promptArrives(fileView, cmdLine, instant ? end : null, !instant) });
                         }
-
-                        var typed = typeText(cmd, promptText(folder) + ' cat ' + nameOf(key), catAt, promptText(folder).length);
+                        var typed = typeActions(cmdLine, 'cat ' + nameOf(key), at + (instant ? 0 : typingGap()));
                         rest = rest.concat(typed.actions);
-                        // The first prompt is in the page at once, as part of this swap, so the empty box is exactly a prompt line tall and the
-                        // prompt does not change the box's height
-                        if (!instant && rest[0].at === 0) rest.shift().fn(false);
                         var blocksAt = typed.end + PAUSE_MS;
                         // The container is shown and laid out before its blocks are revealed, so each block fades from opacity 0
                         rest.push({ at: blocksAt, fn: function (instantNow) { pageContent.hidden = false; if (!instantNow) void pageContent.offsetHeight; } });
@@ -836,8 +909,8 @@
                         if (!instant) rest.push({ at: lastAt, fn: arriveFn(fileView, end, true) });
                         runActions(rest, null, instant);
                     };
-                    if (animated && click) clearThen(swap);
-                    else swap(!animated);
+                    if (animated && click) clearThen(swap, typeClear);
+                    else boxStep(function () { swap(!animated); }, animated);
                 }
 
                 // An error: the command types at the current folder's prompt, then the message and the prompt. A footnote below the
@@ -1011,7 +1084,7 @@
                 // for a click: in animated mode it plays the sequence (clear, cd, tree or cat). Without a click (Back, Forward, a typed
                 // address, the page a direct load opens) the old content is replaced at once, and the destination's prompt appears with its
                 // command typed after it, with no cd. Minimal mode shows the page at once
-                function applyRoute(key, raw, click) {
+                function applyRoute(key, raw, click, typeClear) {
                     var animated = isAnimated();
                     if (key === null) {
                         buildErrorPage(raw, animated);
@@ -1019,29 +1092,29 @@
                     }
                     if (isFile(key)) {
                         if (!content[key]) {
-                            loadFile(key).then(function () { if (lastRoute === key) applyRoute(key, key, click); });
+                            loadFile(key).then(function () { if (lastRoute === key) applyRoute(key, key, click, typeClear); });
                             return;
                         }
                         if (pageKind === 'file' && pageFile === key) {
                             setPath(folderOf(key), key);
                             return;
                         }
-                        buildFilePage(key, animated, click);
+                        buildFilePage(key, animated, click, typeClear);
                         return;
                     }
                     if ((pageKind === 'home' || pageKind === 'dir') && pageFolder === key) {
                         setPath(key);
                         return;
                     }
-                    if (animated && click) clearThen(function (instant) { buildTreePage(key, !instant, false, null, false); });
-                    else buildTreePage(key, animated, false, null, animated);
+                    if (animated && click) clearThen(function (instant) { buildTreePage(key, !instant, false, null, false); }, typeClear);
+                    else boxStep(function () { buildTreePage(key, animated, false, null, animated); }, animated);
                 }
-                // A click or the navbar: sets the address to the route, and shows it
-                function navigate(key) {
+                // A click or the navbar: sets the address to the route, and shows it. A click on the footnote types clear first
+                function navigate(key, typeClear) {
                     userAction();
                     lastRoute = key;
                     setHash(key);
-                    applyRoute(key, key, true);
+                    applyRoute(key, key, true, typeClear);
                 }
                 // A click on a folder opens it in place, or closes it if it is open. Opening a folder only lists it: the terminal does
                 // not move, so the path, the prompt and the address stay where they are
@@ -1076,7 +1149,7 @@
                     e.preventDefault();
                     var key = link.getAttribute('data-route');
                     if (link.hasAttribute('data-toggle')) toggleDir(key, link);
-                    else navigate(key);
+                    else navigate(key, link.hasAttribute('data-footnote'));
                 });
                 // A key ends a running sequence at once, as a click does. The landing is left to play
                 document.addEventListener('keydown', function (e) {

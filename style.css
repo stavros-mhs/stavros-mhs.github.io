@@ -478,6 +478,11 @@ footer {
     margin-top: 0.5rem;
 }
 
+/* An output with no lines holds no space: the box holds only the lines that are there */
+.term-output:empty {
+    margin-top: 0;
+}
+
 /* A blank line, in the output or the panel, takes a line's height and holds no characters */
 .term-blank,
 .ls-blank {
