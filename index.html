@@ -755,7 +755,8 @@
                         actions = actions.concat(typed.actions);
                         clock = typed.end + PAUSE_MS;
                     }
-                    var rows = syncOutput(animated, clock, landingLines);
+                    // On every tree page the cursor moves down with the lines as they print, as it does on the landing.
+                    var rows = syncOutput(animated, clock, true);
                     actions = actions.concat(rows.actions);
                     treePrompt = hidden(promptLine(folder), animated);
                     // A folder's footnote goes back to its parent. It sits below the terminal, in the page's content, not in the terminal
