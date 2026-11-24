@@ -817,6 +817,39 @@
                     }
                     return null;
                 }
+                // The height of a box that holds one prompt line: its padding and border, and one line
+                function oneLineHeight() {
+                    var cs = getComputedStyle(terminal);
+                    var pad = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) + parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+                    var probe = promptLine('', 'term-cmd');
+                    terminal.appendChild(probe);
+                    var line = probe.getBoundingClientRect().height;
+                    terminal.removeChild(probe);
+                    return pad + line;
+                }
+                // When a click clears the screen, the box shrinks to one line from its top edge. Its content has faded out, so only its
+                // background and border show. The box keeps its old height and is scaled down (transform only) over SWAP_MS. Then mutate
+                // runs at the one-line height, so the box does not move again. Instant, or already one line: mutate runs at once
+                function shrinkThen(instant, mutate) {
+                    var h0 = terminal.getBoundingClientRect().height;
+                    var h1 = oneLineHeight();
+                    if (instant || !(h1 < h0 - 0.5)) {
+                        boxStep(mutate, !instant);
+                        return;
+                    }
+                    terminal.classList.add('term-box-shrink');
+                    terminal.style.height = h0 + 'px';
+                    void terminal.offsetHeight;
+                    runActions([
+                        { at: 0, fn: function (now) { if (!now) terminal.style.transform = 'scaleY(' + (h1 / h0) + ')'; } },
+                        { at: SWAP_MS + 20, fn: function (now) {
+                            terminal.classList.remove('term-box-shrink');
+                            terminal.style.transform = '';
+                            terminal.style.height = h1 + 'px';
+                            boxStep(mutate, !now);
+                        } }
+                    ], null, false);
+                }
                 // The screen clears when a click moves to another page: the content fades out over SWAP_MS, and then build runs. A click on
                 // the footnote first types clear on the current prompt, at human pace. When build runs, the content is replaced in one step,
                 // and the box holds the new page's first line
@@ -835,12 +868,12 @@
                     runActions(pre.concat([
                         { at: at, fn: function (instant) { removeCursor(); faders.forEach(function (n) { fadeOut(n, instant); }); } },
                         { at: at + SWAP_MS + 100, untilFade: gate, fn: function (instant) {
-                            boxStep(function () {
+                            shrinkThen(instant, function () {
                                 faders.forEach(fadeReset);
                                 // A page that was scrolled down goes to the top at this moment, at once, so that the cd and the sequence are in view
                                 if (window.scrollY > 0) window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
                                 build(instant);
-                            }, !instant);
+                            });
                         } }
                     ]), null);
                 }

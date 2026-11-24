@@ -14,7 +14,7 @@
     --surface: #4a4a4a;
     --text: #e0ddd8;
     --text-muted: #a8a49e;
-    --accent: #edab71;
+    --accent: #e8954d;
     --link: #d8b78e;
     --link-hover: #f5b06e;
     --rule: #3a3a3a;
@@ -522,6 +522,13 @@ html.term-live[data-motion="animated"] .navbar {
 /* A tree line fades in over 250 ms. Only the opacity changes. The script sets each line's opacity */
 html.term-live[data-motion="animated"] .term-fade {
     transition: opacity 0.25s ease-out;
+}
+
+/* When a click clears the screen, the box shrinks to one line from its top edge over 250 ms. The script sets the scale. Only
+   transform changes, and only in animated mode */
+html[data-motion="animated"] .terminal.term-box-shrink {
+    transform-origin: top;
+    transition: transform 0.25s ease-out;
 }
 
 /* The blinking cursor: a block the height of the text, in the body text colour. It blinks on a steady 1-second cycle, on for
